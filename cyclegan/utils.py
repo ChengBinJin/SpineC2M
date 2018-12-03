@@ -8,9 +8,7 @@ import os
 import sys
 import random
 import numpy as np
-import matplotlib as mpl
 import scipy.misc
-mpl.use('TkAgg')  # or whatever other backend that you want to solve Segmentation fault (core dumped)
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from PIL import Image

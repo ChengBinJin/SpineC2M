@@ -6,15 +6,12 @@
 # ---------------------------------------------------------
 import os
 import logging
-# import time
-# import collections
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
 
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
-# import utils as utils
 from dataset import Dataset
 from cyclegan import cycleGAN
 
@@ -162,7 +159,7 @@ class Solver(object):
 
     def sample(self, iter_time):
         if np.mod(iter_time, self.flags.sample_freq) == 0:
-            imgs = self.model.sample_imgs(sample_size=self.flags.sample_batch)
+            imgs = self.model.sample_imgs()
             self.model.plots(imgs, self.iter_time, self.dataset.image_size, self.sample_out_dir)
 
     def save_model(self, iter_time):

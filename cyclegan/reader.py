@@ -10,7 +10,7 @@ class Reader(object):
     def __init__(self, tfrecords_file, image_size=(300, 400, 1), min_queue_examples=100, batch_size=1,
                  num_threads=8, name=''):
         self.tfrecords_file = tfrecords_file
-        self.image_size = image_size
+        self.image_size = (image_size[0], 2 * image_size[1] ,image_size[2])  # H, 2W, C
         self.min_queue_examples = min_queue_examples
         self.batch_size = batch_size
         self.num_threads = num_threads

@@ -272,9 +272,9 @@ def show_all_variables():
     for idx, op in enumerate(tf.trainable_variables()):
         shape = op.get_shape()
         count = np.prod(shape)
-        print("[%2d] %s %s = %s" % (idx, op.name, shape, count))
+        logger.info("[%2d] %s %s = %s" % (idx, op.name, shape, count))
         total_count += int(count)
-    print("[Total] variable size: %s" % "{:,}".format(total_count))
+    logger.info("[Total] variable size: %s" % "{:,}".format(total_count))
 
 
 def batch_convert2int(images):

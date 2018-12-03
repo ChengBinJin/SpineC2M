@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
+import sys
 import logging
 
 logger = logging.getLogger(__name__)  # logger
@@ -30,24 +31,31 @@ class SpineC2M(object):
     def __init__(self, flags):
         self.flags = flags
         self.name = 'day2night'
-        self.image_size = (300, 400, 1)
+        self.image_size = (300, 200, 1)
 
         # tfrecord path
-        self.train_tfpath = '../data/spine06/tfrecords/train.tfrecords'
-        self.test_tfpath = '../data/spine06/tfrecords/test.tfrecords'
+        self.train_tfpath = '../../Data/spine06/tfrecords/train.tfrecords'
+        self.test_tfpath = '../../Data/spine06/tfrecords/test.tfrecords'
 
         logger.info('Initialize {} dataset SUCCESS!'.format(self.flags.dataset))
         logger.info('Img size: {}'.format(self.image_size))
 
     def __call__(self, is_train='True'):
         if is_train:
+            if not os.path.isfile(self.train_tfpath):
+                sys.exit(' [!] Train tfrecord file is not found...')
             return self.train_tfpath
         else:
+            if not os.path.isfile(self.test_tfpath):
+                sys.exit(' [!] Test tfrecord file is not found...')
             return self.test_tfpath
 
 
 # noinspection PyPep8Naming
-def Dataset(dataset_name, flags):
+def Dataset(dataset_name, flags, log_path=None):
+    if flags.is_train:
+        _init_logger(flags, log_path)  # init logger
+
     if dataset_name == 'spine06':
         return SpineC2M(flags)
     else:

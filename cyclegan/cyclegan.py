@@ -5,12 +5,13 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import logging
+import collections
+import numpy as np
+import matplotlib as mpl
+mpl.use('TkAgg')  # or whatever other backend that you want to solve Segmentation fault (core dumped)
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import tensorflow as tf
-
-# import cv2
-# import scipy.misc
 
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
@@ -188,6 +189,17 @@ class cycleGAN(object):
     #     else:
     #         raise NotImplementedError
 
+    def print_info(self, loss, iter_time):
+        if np.mod(iter_time, self.flags.print_freq) == 0:
+            ord_output = collections.OrderedDict([('cur_iter', iter_time), ('tar_iters', self.flags.iters),
+                                                  ('batch_size', self.flags.batch_size),
+                                                  ('G_loss', loss[0]), ('Dy_loss', loss[1]),
+                                                  ('F_loss', loss[2]), ('Dx_loss', loss[3]),
+                                                  ('dataset', self.flags.dataset),
+                                                  ('gpu_index', self.flags.gpu_index)])
+
+            utils.print_metrics(iter_time, ord_output)
+
     @staticmethod
     def plots(imgs, iter_time, image_size, save_file):
         # parameters for plot size
@@ -209,10 +221,9 @@ class cycleGAN(object):
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_aspect('equal')
-                plt.imshow((imgs[col_index][row_index]).reshape(
-                    image_size[0], image_size[1], image_size[2]), cmap='Greys_r')
+                plt.imshow((imgs[col_index][row_index]).reshape(image_size[0], image_size[1]), cmap='Greys_r')
 
-        plt.savefig(save_file + '/sample_{}.png'.format(str(iter_time)), bbox_inches='tight')
+        plt.savefig(save_file + '/sample_{}.png'.format(str(iter_time).zfill(5)), bbox_inches='tight')
         plt.close(fig)
 
 
