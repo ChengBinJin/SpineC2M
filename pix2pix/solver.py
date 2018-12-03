@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M-cyclegan Implementation
+# Tensorflow SpineC2M-pix2pix Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Cheng-Bin Jin
 # Email: sbkim0407@gmail.com
@@ -13,7 +13,7 @@ from datetime import datetime
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
 from dataset import Dataset
-from cyclegan import cycleGAN
+from pix2pix import Pix2Pix
 
 logger = logging.getLogger(__name__)  # logger
 logger.setLevel(logging.INFO)
@@ -31,8 +31,8 @@ class Solver(object):
         self._init_logger()
 
         self.dataset = Dataset(self.flags.dataset, self.flags, log_path=self.log_out_dir)
-        self.model = cycleGAN(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
-                              log_path=self.log_out_dir)
+        self.model = Pix2Pix(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
+                             log_path=self.log_out_dir)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())

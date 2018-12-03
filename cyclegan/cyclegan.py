@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M Implementation
+# Tensorflow SpineC2M-cyclegan Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Cheng-Bin Jin, based on code from vanhuyz
 # Email: sbkim0407@gmail.com

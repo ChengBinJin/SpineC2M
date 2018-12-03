@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M-cyclegan Implementation
+# Tensorflow SpineC2M-pix2pix Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by vanhuyz
 # ---------------------------------------------------------

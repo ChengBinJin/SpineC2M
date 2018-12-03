@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M-cyclegan Implementation
+# Tensorflow SpineC2M-pix2pix Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Cheng-Bin Jin
 # Email: sbkim0407@gmail.com
@@ -23,7 +23,7 @@ tf.flags.DEFINE_integer('print_freq', 100, 'print frequency for loss, default: 1
 tf.flags.DEFINE_integer('save_freq', 10000, 'save frequency for model, default: 10000')
 tf.flags.DEFINE_integer('sample_freq', 500, 'sample frequency for saving image, default: 500')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
-                                           '(e.g. 20181127-2116), default: None')
+                                           '(e.g. 20181203-1647), default: None')
 
 
 def main(_):
