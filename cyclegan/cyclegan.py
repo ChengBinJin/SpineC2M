@@ -71,9 +71,10 @@ class cycleGAN(object):
         self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops,
                                     use_sigmoid=self.use_sigmoid)
 
-        data_reader = Reader(self.data_path, name='data', image_size=self.image_size, batch_size=self.flags.batch_size)
-        img_pairs = data_reader.feed()
-        self.x_imgs, self.y_imgs = tf.split(img_pairs, [self.image_size[1], self.image_size[1]], axis=2)
+        data_reader = Reader(self.data_path, name='data', image_size=self.image_size, batch_size=self.flags.batch_size,
+                             is_train=self.flags.is_train)
+        # self.x_imgs_ori and self.y_imgs_ori are the images before data augmentation
+        self.x_imgs, self.y_imgs, self.x_imgs_ori, self.y_imgs_ori = data_reader.feed()
 
         self.fake_x_pool_obj = utils.ImagePool(pool_size=50)
         self.fake_y_pool_obj = utils.ImagePool(pool_size=50)

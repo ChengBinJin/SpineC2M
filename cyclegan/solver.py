@@ -107,7 +107,6 @@ class Solver(object):
         threads = tf.train.start_queue_runners(sess=self.sess, coord=coord)
 
         try:
-            # for iter_time in range(self.flags.iters):
             while self.iter_time < self.flags.iters:
                 # samppling images and save them
                 self.sample(self.iter_time)
