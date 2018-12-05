@@ -4,6 +4,8 @@
 # Written by Cheng-Bin Jin, based on code from vanhuyz
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
+import os
+import cv2
 import logging
 import collections
 import numpy as np
@@ -24,10 +26,10 @@ logger.setLevel(logging.INFO)
 
 # noinspection PyPep8Naming
 class cycleGAN(object):
-    def __init__(self, sess, flags, image_size, data_path, log_path=None):
+    def __init__(self, sess, flags, img_size, data_path, log_path=None):
         self.sess = sess
         self.flags = flags
-        self.image_size = image_size
+        self.img_size = img_size
         self.data_path = data_path
         self.log_path = log_path
 
@@ -57,24 +59,24 @@ class cycleGAN(object):
 
     def _build_net(self):
         # tfph: TensorFlow PlaceHolder
-        self.x_test_tfph = tf.placeholder(tf.float32, shape=[None, *self.image_size], name='x_test_tfph')
-        self.y_test_tfph = tf.placeholder(tf.float32, shape=[None, *self.image_size], name='y_test_tfph')
-        self.fake_x_tfph = tf.placeholder(tf.float32, shape=[None, *self.image_size], name='fake_x_tfph')
-        self.fake_y_tfph = tf.placeholder(tf.float32, shape=[None, *self.image_size], name='fake_y_tfph')
+        self.x_test_tfph = tf.placeholder(tf.float32, shape=[None, *self.img_size], name='x_test_tfph')
+        self.y_test_tfph = tf.placeholder(tf.float32, shape=[None, *self.img_size], name='y_test_tfph')
+        self.fake_x_tfph = tf.placeholder(tf.float32, shape=[None, *self.img_size], name='fake_x_tfph')
+        self.fake_y_tfph = tf.placeholder(tf.float32, shape=[None, *self.img_size], name='fake_y_tfph')
 
-        self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.image_size,
+        self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
         self.Dy_dis = Discriminator(name='Dy', ndf=self.ndf, norm=self.norm, _ops=self._Dy_dis_train_ops,
                                     use_sigmoid=self.use_sigmoid)
-        self.F_gen = Generator(name='F', ngf=self.ngf, norm=self.norm, image_size=self.image_size,
+        self.F_gen = Generator(name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._F_gen_train_ops)
         self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops,
                                     use_sigmoid=self.use_sigmoid)
 
-        data_reader = Reader(self.data_path, name='data', image_size=self.image_size, batch_size=self.flags.batch_size,
+        data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
                              is_train=self.flags.is_train)
         # self.x_imgs_ori and self.y_imgs_ori are the images before data augmentation
-        self.x_imgs, self.y_imgs, self.x_imgs_ori, self.y_imgs_ori = data_reader.feed()
+        self.x_imgs, self.y_imgs, self.x_imgs_ori, self.y_imgs_ori, self.img_name = data_reader.feed()
 
         self.fake_x_pool_obj = utils.ImagePool(pool_size=50)
         self.fake_y_pool_obj = utils.ImagePool(pool_size=50)
@@ -173,22 +175,18 @@ class cycleGAN(object):
 
         return [G_loss, Dy_loss, F_loss, Dx_loss], summary
 
+    def test_step(self):
+        x_vals, y_vals, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
+        fakes_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: x_vals})
+
+        return [x_vals, fakes_y, y_vals], img_name
+
     def sample_imgs(self):
         x_val, y_val = self.sess.run([self.x_imgs, self.y_imgs])
         fake_y, fake_x = self.sess.run([self.fake_y_sample, self.fake_x_sample],
                                        feed_dict={self.x_test_tfph: x_val, self.y_test_tfph: y_val})
 
         return [x_val, fake_y, y_val, fake_x]
-
-    # def test_step(self, img, mode='XtoY'):
-    #     if mode == 'XtoY':
-    #         fake_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: img})
-    #         return [img, fake_y]
-    #     elif mode == 'YtoX':
-    #         fake_x = self.sess.run(self.fake_x_sample, feed_dict={self.y_test_tfph: img})
-    #         return [img, fake_x]
-    #     else:
-    #         raise NotImplementedError
 
     def print_info(self, loss, iter_time):
         if np.mod(iter_time, self.flags.print_freq) == 0:
@@ -226,6 +224,22 @@ class cycleGAN(object):
 
         plt.savefig(save_file + '/sample_{}.png'.format(str(iter_time).zfill(5)), bbox_inches='tight')
         plt.close(fig)
+
+    def plots_test(self, imgs, img_name, save_file, eval_file, gt_file):
+        num_imgs = len(imgs)
+
+        canvas = np.zeros((self.img_size[0], num_imgs * self.img_size[1]), np.uint8)
+        for idx in range(num_imgs):
+            canvas[:, idx * self.img_size[1]: (idx+1) * self.img_size[1]] = \
+                np.squeeze(255. * utils.inverse_transform(imgs[idx]))
+
+        img_name_ = img_name.astype('U26')[0]
+        # save imgs on test folder
+        cv2.imwrite(os.path.join(save_file, img_name_), canvas)
+        # save imgs on eval folder
+        cv2.imwrite(os.path.join(eval_file, img_name_), canvas[:,self.img_size[1]:2*self.img_size[1]])
+        # save imgs on gt folder
+        # cv2.imwrite(os.path.join(gt_file, img_name_), canvas[:, 2*self.img_size[1]:3*self.img_size[1]])
 
 
 class Generator(object):

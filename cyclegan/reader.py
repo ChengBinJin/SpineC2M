@@ -34,21 +34,29 @@ class Reader(object):
                 'image/encoded_image': tf.FixedLenFeature([], tf.string)})
 
             image_buffer = features['image/encoded_image']
+            img_name_buffer = features['image/file_name']
             image = tf.image.decode_jpeg(image_buffer, channels=self.image_size[2])
             x_img, y_img, x_img_ori, y_img_ori = self._preprocess(image, is_train=self.is_train)
-            x_imgs, y_imgs, x_imgs_ori, y_imgs_ori = tf.train.shuffle_batch(
-                [x_img, y_img, x_img_ori, y_img_ori], batch_size=self.batch_size,
-                num_threads=self.num_threads, capacity=self.min_queue_examples + 3 * self.batch_size,
-                min_after_dequeue=self.min_queue_examples)
 
-        return x_imgs, y_imgs, x_imgs_ori, y_imgs_ori
+            if self.is_train:
+                x_imgs, y_imgs, x_imgs_ori, y_imgs_ori, img_name = tf.train.shuffle_batch(
+                    [x_img, y_img, x_img_ori, y_img_ori, img_name_buffer], batch_size=self.batch_size,
+                    num_threads=self.num_threads, capacity=self.min_queue_examples + 3 * self.batch_size,
+                    min_after_dequeue=self.min_queue_examples)
+            else:
+                x_imgs, y_imgs, x_imgs_ori, y_imgs_ori, img_name = tf.train.batch(
+                    [x_img, y_img, x_img_ori, y_img_ori, img_name_buffer], batch_size=self.batch_size,
+                    num_threads=1, capacity=self.min_queue_examples + 3 * self.batch_size,
+                    allow_smaller_final_batch=True)
+
+        return x_imgs, y_imgs, x_imgs_ori, y_imgs_ori, img_name
 
     def _preprocess(self, img, is_train):
         # Resize to 2D and split to left and right image
         img = tf.image.resize_images(img, size=(self.image_size[0], self.image_size[1]))
         x_img_ori, y_img_ori = tf.split(img, [self.ori_img_size[1], self.ori_img_size[1]], axis=1)
 
-        x_img, y_img = None, None
+        x_img, y_img = x_img_ori, y_img_ori
         # Data augmentation
         if is_train:
             random_seed = int(round(time.time()))

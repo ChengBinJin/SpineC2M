@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
+import time
 import logging
 import numpy as np
 import tensorflow as tf
@@ -61,10 +62,18 @@ class Solver(object):
         elif not self.flags.is_train:  # test stage
             self.model_out_dir = "{}/model/{}".format(self.flags.dataset, self.flags.load_model)
             self.test_out_dir = "{}/test/{}".format(self.flags.dataset, self.flags.load_model)
+            self.eval_out_dir = "../eval/cyclegan"
+            self.gt_out_dir = "../eval/gt"
             self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, self.flags.load_model)
 
             if not os.path.isdir(self.test_out_dir):
                 os.makedirs(self.test_out_dir)
+
+            if not os.path.isdir(self.eval_out_dir):
+                os.makedirs(self.eval_out_dir)
+
+            if not os.path.isdir(self.gt_out_dir):
+                os.makedirs(self.gt_out_dir)
 
     def _init_logger(self):
         formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
@@ -138,23 +147,35 @@ class Solver(object):
         else:
             logger.info(' [!] Load Failed...')
 
-        # # read test data
-        # test_data_files = utils.all_files_under(self.dataset.night_path)
-        # total_time = 0.
-        #
-        # for idx in range(len(test_data_files)):
-        #     img = utils.imagefiles2arrs([test_data_files[idx]])  # read img
-        #     img = utils.transform(img)  # convert [0, 255] to [-1., 1.]
-        #
-        #     # measure inference time
-        #     start_time = time.time()
-        #     imgs = self.model.test_step(img, mode='YtoX')  # inference
-        #     total_time += time.time() - start_time
-        #
-        #     self.model.plots(imgs, idx, self.dataset.image_size, self.test_out_dir)  # write results
-        #
-        # print('Avg PT: {:3f} msec.'.format(total_time / len(test_data_files) * 1000.))
-        print('Hello test function!')
+        # threads for tfrecord
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=self.sess, coord=coord)
+
+        iter_time = 0
+        total_time = 0.
+        try:
+            while iter_time < self.dataset.num_tests:
+                print(iter_time)
+
+                tic = time.time()
+                imgs, img_names = self.model.test_step()
+                total_time += time.time() - tic
+
+                self.model.plots_test(imgs, img_names, self.test_out_dir, self.eval_out_dir, self.gt_out_dir)
+                iter_time += 1
+
+            print('Avg. PT: {} msec.'.format(total_time / self.dataset.num_tests * 1000.))
+
+        except KeyboardInterrupt:
+            coord.request_stop()
+        except Exception as e:
+            coord.request_stop(e)
+        except tf.errors.OutOfRangeError:
+            coord.request_stop()
+        finally:
+            # when done, ask the threads to stop
+            coord.request_stop()
+            coord.join(threads)
 
     def sample(self, iter_time):
         if np.mod(iter_time, self.flags.sample_freq) == 0:

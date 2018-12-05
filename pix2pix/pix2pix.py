@@ -4,6 +4,8 @@
 # Written by Cheng-Bin Jin, based on code from vanhuyz
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
+import os
+import cv2
 import logging
 import collections
 import numpy as np
@@ -57,7 +59,7 @@ class Pix2Pix(object):
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
                              is_train=self.flags.is_train)
         # self.x_imgs_ori and self.y_imgs_ori are the images before data augmentation
-        self.x_imgs, self.y_imgs, self.x_imgs_ori, self.y_imgs_ori = data_reader.feed()
+        self.x_imgs, self.y_imgs, self.x_imgs_ori, self.y_imgs_ori, self.img_name = data_reader.feed()
 
         self.g_samples = self.generator(self.x_imgs)
         self.real_pair = tf.concat([self.x_imgs, self.y_imgs], axis=3)
@@ -128,21 +130,17 @@ class Pix2Pix(object):
 
         return [gan_loss, cond_loss, g_loss, d_loss], summary
 
+    def test_step(self):
+        x_vals, y_vals, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
+        fakes_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: x_vals})
+
+        return [x_vals, fakes_y, y_vals], img_name
+
     def sample_imgs(self):
         x_vals, y_vals = self.sess.run([self.x_imgs, self.y_imgs])
         fakes_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: x_vals})
 
         return [x_vals, fakes_y, y_vals]
-
-    # def test_step(self, img, mode='XtoY'):
-    #     if mode == 'XtoY':
-    #         fake_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: img})
-    #         return [img, fake_y]
-    #     elif mode == 'YtoX':
-    #         fake_x = self.sess.run(self.fake_x_sample, feed_dict={self.y_test_tfph: img})
-    #         return [img, fake_x]
-    #     else:
-    #         raise NotImplementedError
 
     def print_info(self, loss, iter_time):
         if np.mod(iter_time, self.flags.print_freq) == 0:
@@ -181,6 +179,21 @@ class Pix2Pix(object):
         plt.savefig(save_file + '/sample_{}.png'.format(str(iter_time).zfill(5)), bbox_inches='tight')
         plt.close(fig)
 
+    def plots_test(self, imgs, img_name, save_file, eval_file, gt_file):
+        num_imgs = len(imgs)
+
+        canvas = np.zeros((self.img_size[0], num_imgs * self.img_size[1]), np.uint8)
+        for idx in range(num_imgs):
+            canvas[:, idx * self.img_size[1]: (idx+1) * self.img_size[1]] = \
+                np.squeeze(255. * utils.inverse_transform(imgs[idx]))
+
+        img_name_ = img_name.astype('U26')[0]
+        # save imgs on test folder
+        cv2.imwrite(os.path.join(save_file, img_name_), canvas)
+        # save imgs on eval folder
+        cv2.imwrite(os.path.join(eval_file, img_name_), canvas[:,self.img_size[1]:2*self.img_size[1]])
+        # save imgs on gt folder
+        cv2.imwrite(os.path.join(gt_file, img_name_), canvas[:, 2*self.img_size[1]:3*self.img_size[1]])
 
 class Generator(object):
     def __init__(self, name=None, gen_c=None, image_size=(300, 200, 1), _ops=None):

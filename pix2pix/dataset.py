@@ -32,6 +32,7 @@ class SpineC2M(object):
         self.flags = flags
         self.name = 'day2night'
         self.image_size = (300, 200, 1)
+        self.num_tests = 4426
 
         # tfrecord path
         self.train_tfpath = '../../Data/spine06/tfrecords/train.tfrecords'
