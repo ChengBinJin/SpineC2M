@@ -22,11 +22,13 @@ def write_to_csv(data_list, method_names, img_names):
 
     # calucate mean of the MAE and PSNR for one method
     mean_mae = np.mean(data_list[0], axis=1)
-    mean_psnr = np.mean(data_list[1], axis=1)
+    mean_mse = np.mean(data_list[1], axis=1)
+    mean_psnr = np.mean(data_list[2], axis=1)
     std_mae = np.std(data_list[0], axis=1)
-    std_psnr = np.std(data_list[1], axis=1)
+    std_mse = np.std(data_list[1], axis=1)
+    std_psnr = np.std(data_list[2], axis=1)
 
-    attributes = ['No', 'Name', 'MAE', 'PSNR']
+    attributes = ['No', 'Name', 'MAE', 'RMSE', 'PSNR']
     for idx in range(len(method_names)):
         worksheet = workbook.add_worksheet(name=method_names[idx])
         for attr_idx in range(len(attributes)):
@@ -41,14 +43,16 @@ def write_to_csv(data_list, method_names, img_names):
                 else:
                     worksheet.write(img_idx+1, attr_idx, data_list[attr_idx-2][idx, img_idx], xlsFormate)
 
-        # write mean and std value
+        # write mean and std value for MAE, MSE, and PSNR
         worksheet.write(num_tests+1, 1, 'Mean', xlsFormate)
         worksheet.write(num_tests+1, 2, mean_mae[idx], xlsFormate)
-        worksheet.write(num_tests+1, 3, mean_psnr[idx], xlsFormate)
+        worksheet.write(num_tests+1, 3, mean_mse[idx], xlsFormate)
+        worksheet.write(num_tests+1, 4, mean_psnr[idx], xlsFormate)
 
         worksheet.write(num_tests+2, 1, 'Std', xlsFormate)
         worksheet.write(num_tests+2, 2, std_mae[idx], xlsFormate)
-        worksheet.write(num_tests+2, 3, std_psnr[idx], xlsFormate)
+        worksheet.write(num_tests+2, 3, std_mse[idx], xlsFormate)
+        worksheet.write(num_tests+2, 4, std_psnr[idx], xlsFormate)
 
     workbook.close()
 
@@ -72,12 +76,12 @@ def all_files_under(path, extension=None, append_path=True, sort=True):
 
 
 def draw_box_plot(data_list, method_names):
-    filenames = ['MAE', 'PSNR']
-    expressions = [' (lower is better)', ' (higher is better)']
+    filenames = ['MAE', 'RMSE', 'PSNR']
+    expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)']
     colors = ['red', 'green']  # ['blue', 'red', 'green', 'yellow']
 
     for idx, data in enumerate(data_list):
-        box = plt.boxplot(np.transpose(data), patch_artist=True, showmeans=True)
+        box = plt.boxplot(np.transpose(data), patch_artist=True, showmeans=True, sym='r+')
 
         # connect mean values
         y = data.mean(axis=1)
@@ -95,17 +99,25 @@ def draw_box_plot(data_list, method_names):
         plt.close()
 
 
-def mean_absoulute_error(pred, gt):
+def mean_absoulute_error(pred_, gt_):
+    pred, gt = pred_.copy(), gt_.copy()
     h, w = pred.shape
     mae = np.sum(np.abs(pred - gt)) / (h * w)
 
     return mae
 
 
-def peak_signal_to_noise_ratio(pred, gt):
+def root_mean_square_error(pred_, gt_):
+    pred, gt = pred_.copy(), gt_.copy()
+    h, w = pred.shape
+    mse = np.sqrt(np.sum(np.square(pred - gt)) / (h * w))
+    return mse
+
+
+def peak_signal_to_noise_ratio(pred_, gt_):
+    pred, gt = pred_.copy(), gt_.copy()
     max_value = 255. * 255.
     h, w = pred.shape
     upper_bound = 20 * np.log10(max_value)
     psnr = upper_bound - 10 * np.log10(np.sum(np.square(pred - gt)) / (h * w))
-
     return psnr
