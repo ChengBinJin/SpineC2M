@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M-cyclegan Implementation
+# Tensorflow SpineC2M-discogan Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Cheng-Bin Jin
 # Email: sbkim0407@gmail.com
@@ -14,7 +14,7 @@ from datetime import datetime
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
 from dataset import Dataset
-from cyclegan import cycleGAN
+from discogan import DiscoGAN
 
 logger = logging.getLogger(__name__)  # logger
 logger.setLevel(logging.INFO)
@@ -32,7 +32,7 @@ class Solver(object):
         self._init_logger()
 
         self.dataset = Dataset(self.flags.dataset, self.flags, log_path=self.log_out_dir)
-        self.model = cycleGAN(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
+        self.model = DiscoGAN(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
                               log_path=self.log_out_dir)
 
         self.saver = tf.train.Saver()
@@ -96,11 +96,14 @@ class Solver(object):
             logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('learning_rate: {}'.format(self.flags.learning_rate))
             logger.info('beta1: {}'.format(self.flags.beta1))
+            logger.info('beta2: {}'.format(self.flags.beta2))
+            logger.info('weight_decay: {}'.format(self.flags.weight_decay))
 
             logger.info('iters: {}'.format(self.flags.iters))
             logger.info('print_freq: {}'.format(self.flags.print_freq))
             logger.info('save_freq: {}'.format(self.flags.save_freq))
             logger.info('sample_freq: {}'.format(self.flags.sample_freq))
+            logger.info('sample_batch: {}'.format(self.flags.sample_batch))
             logger.info('load_model: {}'.format(self.flags.load_model))
 
     def train(self):
@@ -179,7 +182,7 @@ class Solver(object):
 
     def sample(self, iter_time):
         if np.mod(iter_time, self.flags.sample_freq) == 0:
-            imgs = self.model.sample_imgs()
+            imgs = self.model.sample_imgs(sample_size=self.flags.sample_batch)
             self.model.plots(imgs, self.iter_time, self.dataset.image_size, self.sample_out_dir)
 
     def save_model(self, iter_time):

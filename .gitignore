@@ -1,13 +1,11 @@
 */.idea/
 */.idea/vcs.xml
-cyclegan/__pycache__/
-cyclegan/spine06/
+*/__pycache__/
+*/spine06/
 eval/cyclegan/
 eval/gt/
 eval/pix2pix/
 eval/src/.idea/
 eval/src/*.jpg
 eval/src/__pycache__/
-pix2pix/spine06/
-pix2pix/__pycache__/
 eval/src/*.xlsx
