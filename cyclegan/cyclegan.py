@@ -176,10 +176,11 @@ class cycleGAN(object):
         return [G_loss, Dy_loss, F_loss, Dx_loss], summary
 
     def test_step(self):
-        x_vals, y_vals, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
-        fakes_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: x_vals})
+        x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
+        fake_y, fake_x = self.sess.run([self.fake_y_sample, self.fake_x_sample],
+                                       feed_dict={self.x_test_tfph: x_val, self.y_test_tfph: y_val})
 
-        return [x_vals, fakes_y, y_vals], img_name
+        return [x_val, fake_y, y_val, fake_x], img_name
 
     def sample_imgs(self):
         x_val, y_val = self.sess.run([self.x_imgs, self.y_imgs])

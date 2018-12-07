@@ -8,6 +8,7 @@ import os
 import xlsxwriter
 import numpy as np
 import matplotlib.pyplot as plt
+from skimage.measure import compare_ssim
 
 
 def write_to_csv(data_list, method_names, img_names):
@@ -24,11 +25,13 @@ def write_to_csv(data_list, method_names, img_names):
     mean_mae = np.mean(data_list[0], axis=1)
     mean_mse = np.mean(data_list[1], axis=1)
     mean_psnr = np.mean(data_list[2], axis=1)
+    mean_ssim = np.mean(data_list[3], axis=1)
     std_mae = np.std(data_list[0], axis=1)
     std_mse = np.std(data_list[1], axis=1)
     std_psnr = np.std(data_list[2], axis=1)
+    std_ssim = np.std(data_list[3], axis=1)
 
-    attributes = ['No', 'Name', 'MAE', 'RMSE', 'PSNR']
+    attributes = ['No', 'Name', 'MAE', 'RMSE', 'PSNR', 'SSIM']
     for idx in range(len(method_names)):
         worksheet = workbook.add_worksheet(name=method_names[idx])
         for attr_idx in range(len(attributes)):
@@ -48,11 +51,13 @@ def write_to_csv(data_list, method_names, img_names):
         worksheet.write(num_tests+1, 2, mean_mae[idx], xlsFormate)
         worksheet.write(num_tests+1, 3, mean_mse[idx], xlsFormate)
         worksheet.write(num_tests+1, 4, mean_psnr[idx], xlsFormate)
+        worksheet.write(num_tests+1, 5, mean_ssim[idx], xlsFormate)
 
         worksheet.write(num_tests+2, 1, 'Std', xlsFormate)
         worksheet.write(num_tests+2, 2, std_mae[idx], xlsFormate)
         worksheet.write(num_tests+2, 3, std_mse[idx], xlsFormate)
         worksheet.write(num_tests+2, 4, std_psnr[idx], xlsFormate)
+        worksheet.write(num_tests+2, 5, std_ssim[idx], xlsFormate)
 
     workbook.close()
 
@@ -76,12 +81,12 @@ def all_files_under(path, extension=None, append_path=True, sort=True):
 
 
 def draw_box_plot(data_list, method_names):
-    filenames = ['MAE', 'RMSE', 'PSNR']
-    expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)']
+    filenames = ['MAE', 'RMSE', 'PSNR', 'SSIM']
+    expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)', ' (higher is better)']
     colors = ['red', 'green']  # ['blue', 'red', 'green', 'yellow']
 
     for idx, data in enumerate(data_list):
-        box = plt.boxplot(np.transpose(data), patch_artist=True, showmeans=True, sym='r+')
+        box = plt.boxplot(np.transpose(data), patch_artist=True, showmeans=True, sym='r+', vert=True)
 
         # connect mean values
         y = data.mean(axis=1)
@@ -89,6 +94,16 @@ def draw_box_plot(data_list, method_names):
 
         for patch, color in zip(box['boxes'], colors):
             patch.set(facecolor=color, alpha=0.5, linewidth=1)
+
+        # scatter draw datapoints
+        x_vals, y_vals = [], []
+        for i in range(data_list[0].shape[0]):
+            # move x coordinate to not overlapping
+            x_vals.append(np.random.normal(i + 0.7, 0.05, data.shape[1]))
+            y_vals.append(data[i, :].tolist())
+
+        for x_val, y_val, color in zip(x_vals, y_vals, colors):
+            plt.scatter(x_val, y_val, s=5, c=color, alpha=0.5)
 
         ax = plt.axes()
         ax.yaxis.grid()  # horizontal lines
@@ -99,25 +114,26 @@ def draw_box_plot(data_list, method_names):
         plt.close()
 
 
-def mean_absoulute_error(pred_, gt_):
-    pred, gt = pred_.copy(), gt_.copy()
+def mean_absoulute_error(pred, gt):
     h, w = pred.shape
     mae = np.sum(np.abs(pred - gt)) / (h * w)
-
     return mae
 
 
-def root_mean_square_error(pred_, gt_):
-    pred, gt = pred_.copy(), gt_.copy()
+def root_mean_square_error(pred, gt):
     h, w = pred.shape
-    mse = np.sqrt(np.sum(np.square(pred - gt)) / (h * w))
-    return mse
+    rmse = np.sqrt(np.sum(np.square(pred - gt)) / (h * w))
+    return rmse
 
 
-def peak_signal_to_noise_ratio(pred_, gt_):
-    pred, gt = pred_.copy(), gt_.copy()
+def peak_signal_to_noise_ratio(pred, gt):
     max_value = 255. * 255.
     h, w = pred.shape
     upper_bound = 20 * np.log10(max_value)
     psnr = upper_bound - 10 * np.log10(np.sum(np.square(pred - gt)) / (h * w))
     return psnr
+
+
+def structural_similarity_index(pred, gt):
+    # Use skimage.measure li
+    return compare_ssim(gt, pred, data_range=pred.max() - pred.min())
