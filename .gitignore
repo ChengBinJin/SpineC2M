@@ -13,3 +13,4 @@ eval/ct/
 eval/discogan/
 .DS_Store
 */.DS_Store
+eval/src/*/*.jpg
