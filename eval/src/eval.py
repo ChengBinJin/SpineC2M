@@ -76,6 +76,6 @@ def main(gt, methods):
 
 if __name__ == '__main__':
     gt_ = 'gt'
-    methods_ = ['pix2pix', 'cyclegan']
+    methods_ = ['pix2pix', 'cyclegan', 'discogan']
 
     main(gt_, methods_)

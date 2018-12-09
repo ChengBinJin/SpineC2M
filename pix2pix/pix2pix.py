@@ -179,7 +179,7 @@ class Pix2Pix(object):
         plt.savefig(save_file + '/sample_{}.png'.format(str(iter_time).zfill(5)), bbox_inches='tight')
         plt.close(fig)
 
-    def plots_test(self, imgs, img_name, save_file, eval_file, gt_file):
+    def plots_test(self, imgs, img_name, save_file, eval_file, gt_file, ct_file):
         num_imgs = len(imgs)
 
         canvas = np.zeros((self.img_size[0], num_imgs * self.img_size[1]), np.uint8)
@@ -193,7 +193,9 @@ class Pix2Pix(object):
         # save imgs on eval folder
         cv2.imwrite(os.path.join(eval_file, img_name_), canvas[:,self.img_size[1]:2*self.img_size[1]])
         # save imgs on gt folder
-        cv2.imwrite(os.path.join(gt_file, img_name_), canvas[:, 2*self.img_size[1]:3*self.img_size[1]])
+        # cv2.imwrite(os.path.join(gt_file, img_name_), canvas[:, 2*self.img_size[1]:3*self.img_size[1]])
+
+        cv2.imwrite(os.path.join(ct_file, img_name_), canvas[:, :self.img_size[1]])
 
 class Generator(object):
     def __init__(self, name=None, gen_c=None, image_size=(300, 200, 1), _ops=None):

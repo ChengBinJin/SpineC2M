@@ -18,10 +18,13 @@ class Reader(object):
         self.image_size = (image_size[0], 2 * image_size[1] ,image_size[2])  # H, 2W, C
 
         self.min_queue_examples = min_queue_examples
-        self.batch_size = batch_size
+        self.is_train = is_train
+        if self.is_train:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = 1
         self.num_threads = num_threads
         self.reader = tf.TFRecordReader()
-        self.is_train = is_train
         self.name = name
 
     def feed(self):

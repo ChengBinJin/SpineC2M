@@ -83,14 +83,14 @@ def all_files_under(path, extension=None, append_path=True, sort=True):
 def draw_box_plot(data_list, method_names):
     filenames = ['MAE', 'RMSE', 'PSNR', 'SSIM']
     expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)', ' (higher is better)']
-    colors = ['red', 'green']  # ['blue', 'red', 'green', 'yellow']
+    colors = ['red', 'green', 'blue']  # ['blue', 'red', 'green', 'yellow']
 
     for idx, data in enumerate(data_list):
         box = plt.boxplot(np.transpose(data), patch_artist=True, showmeans=True, sym='r+', vert=True)
 
         # connect mean values
         y = data.mean(axis=1)
-        plt.plot([1, 2], y, 'r--')
+        plt.plot(range(1, len(method_names)+1), y, 'r--')
 
         for patch, color in zip(box['boxes'], colors):
             patch.set(facecolor=color, alpha=0.5, linewidth=1)
@@ -107,7 +107,7 @@ def draw_box_plot(data_list, method_names):
 
         ax = plt.axes()
         ax.yaxis.grid()  # horizontal lines
-        plt.xticks([1, 2], method_names)
+        plt.xticks(range(1, len(method_names)+1), method_names)
         plt.setp(box['medians'], color='black')
         plt.title(filenames[idx] + expressions[idx])
         plt.savefig(filenames[idx] + '.jpg', dpi=300)

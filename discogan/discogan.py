@@ -182,10 +182,11 @@ class DiscoGAN(object):
                 Dx_loss, Dx_dis_loss, Dx_dis_reg], summary
 
     def test_step(self):
-        x_val, y_val, img_names = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
-        fake_y = self.sess.run(self.fake_y_sample, feed_dict={self.x_test_tfph: x_val})
+        x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
+        fake_y, fake_x = self.sess.run([self.fake_y_sample, self.fake_x_sample],
+                                       feed_dict={self.x_test_tfph: x_val, self.y_test_tfph: y_val})
 
-        return [x_val, fake_y, y_val], img_names
+        return [x_val, fake_y, y_val, fake_x], img_name
 
     def sample_imgs(self, sample_size=1):
         x_val, y_val = self.sess.run([self.x_imgs, self.y_imgs])

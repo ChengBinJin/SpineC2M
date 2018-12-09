@@ -9,3 +9,5 @@ eval/src/.idea/
 eval/src/*.jpg
 eval/src/__pycache__/
 eval/src/*.xlsx
+eval/ct/
+eval/discogan/

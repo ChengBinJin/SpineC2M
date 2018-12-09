@@ -64,6 +64,7 @@ class Solver(object):
             self.test_out_dir = "{}/test/{}".format(self.flags.dataset, self.flags.load_model)
             self.eval_out_dir = "../eval/pix2pix"
             self.gt_out_dir = "../eval/gt"
+            self.ct_out_dir = "../eval/ct"
             self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, self.flags.load_model)
 
             if not os.path.isdir(self.test_out_dir):
@@ -74,6 +75,9 @@ class Solver(object):
 
             if not os.path.isdir(self.gt_out_dir):
                 os.makedirs(self.gt_out_dir)
+
+            if not os.path.isdir(self.ct_out_dir):
+                os.makedirs(self.ct_out_dir)
 
     def _init_logger(self):
         formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
@@ -161,10 +165,11 @@ class Solver(object):
                 imgs, img_names = self.model.test_step()
                 total_time += time.time() - tic
 
-                self.model.plots_test(imgs, img_names, self.test_out_dir, self.eval_out_dir, self.gt_out_dir)
+                self.model.plots_test(imgs, img_names, self.test_out_dir, self.eval_out_dir, self.gt_out_dir,
+                                      self.ct_out_dir)
                 iter_time += 1
 
-            print('Avg. PT: {:.2} msec.'.format(total_time / self.dataset.num_tests * 1000.))
+            print('Avg. PT: {:.2f} msec.'.format(total_time / self.dataset.num_tests * 1000.))
 
         except KeyboardInterrupt:
             coord.request_stop()

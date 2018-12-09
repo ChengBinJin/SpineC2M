@@ -62,7 +62,7 @@ class Solver(object):
         elif not self.flags.is_train:  # test stage
             self.model_out_dir = "{}/model/{}".format(self.flags.dataset, self.flags.load_model)
             self.test_out_dir = "{}/test/{}".format(self.flags.dataset, self.flags.load_model)
-            self.eval_out_dir = "../eval/cyclegan"
+            self.eval_out_dir = "../eval/discogan"
             self.gt_out_dir = "../eval/gt"
             self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, self.flags.load_model)
 
