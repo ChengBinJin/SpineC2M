@@ -13,6 +13,7 @@ parser.add_argument('--measure', dest='measure', default='ssim', type=str, help=
 parser.add_argument('--number', dest='number', default=20, type=int, help='number of examples')
 args = parser.parse_args()
 
+
 class SliceExample:
     def __init__(self, name, method, measurement):
         self.name = name
@@ -39,6 +40,7 @@ def check_args(methods, measures):
 
     return flag, message
 
+
 def read_imgs_and_measurement():
     slice_list = []
 
@@ -47,7 +49,7 @@ def read_imgs_and_measurement():
 
     for idx in range(len(gt_names)):
         if np.mod(idx, 300) == 0:
-            print('Method: {}, Meausre: {}, idx: {}'.format(args.method, args.measure, idx))
+            print('Method: {}, Measure: {}, idx: {}'.format(args.method, args.measure, idx))
 
         img_name = os.path.basename(gt_names[idx])
 
@@ -56,7 +58,7 @@ def read_imgs_and_measurement():
         pred_img = cv2.imread(os.path.join('../{}'.format(args.method), img_name),
                               cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
-        # calcualte measurement
+        # calculate measurement
         measure_value = 0.
         if args.measure == 'mae':
             measure_value = utils.mean_absoulute_error(pred_img, gt_img)
@@ -86,18 +88,18 @@ def main(methods, measures, img_size):
 
     # Save image
     for idx in range(args.number):
-        img_name = new_slice_list[idx].name + '.jpg'
+        img_name = new_slice_list[idx].name
         canvas = np.zeros((img_size[0], (len(methods) + 2) * img_size[1]), dtype=np.uint8)
 
         ct_img = cv2.imread(os.path.join('../ct', img_name), cv2.IMREAD_GRAYSCALE)
         mri_img = cv2.imread(os.path.join('../gt', img_name), cv2.IMREAD_GRAYSCALE)
-        print('img_size[1] {}'.format(img_size[1]))
+
         canvas[:, :img_size[1]] = ct_img
         canvas[:, (len(methods)+1)*img_size[1]:] = mri_img
 
         for idx_method, method_name in enumerate(methods):
             img = cv2.imread(os.path.join('../{}'.format(method_name), img_name), cv2.IMREAD_GRAYSCALE)
-            canvas[: (idx_method+1)*img_size[1]:(idx_method+2)*img_size[1]] = img
+            canvas[:, (idx_method+1)*img_size[1]:(idx_method+2)*img_size[1]] = img
 
         cv2.imwrite(os.path.join(save_folder, img_name), canvas)
 

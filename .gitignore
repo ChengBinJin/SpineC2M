@@ -11,3 +11,5 @@ eval/src/__pycache__/
 eval/src/*.xlsx
 eval/ct/
 eval/discogan/
+.DS_Store
+*/.DS_Store
