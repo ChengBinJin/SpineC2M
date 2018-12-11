@@ -60,13 +60,13 @@ def read_imgs_and_measurement():
 
         # calculate measurement
         measure_value = 0.
-        if args.measure == 'mae':
+        if args.measure.lower() == 'mae':
             measure_value = utils.mean_absoulute_error(pred_img, gt_img)
-        elif args.measure == 'rmse':
+        elif args.measure.lower() == 'rmse':
             measure_value = utils.root_mean_square_error(pred_img, gt_img)
-        elif args.measure == 'psnr':
+        elif args.measure.lower() == 'psnr':
             measure_value = utils.peak_signal_to_noise_ratio(pred_img, gt_img)
-        elif args.measure == 'ssim':
+        elif args.measure.lower() == 'ssim':
             measure_value = utils.structural_similarity_index(pred_img, gt_img)
 
         slice_list.append(SliceExample(img_name, args.method, measure_value))
@@ -83,24 +83,44 @@ def main(methods, measures, img_size):
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
 
+    if args.measure.lower() == 'mae' or args.measure.lower() == 'rmse':
+        revise_flag = False
+    else:  # 'psnr' and 'ssim'
+        revise_flag = True
+
     slice_list = read_imgs_and_measurement()
-    new_slice_list = sorted(slice_list, key=lambda slice_: slice_.measurement, reverse=True)
+    new_slice_list = sorted(slice_list, key=lambda slice_: slice_.measurement, reverse=revise_flag)
 
     # Save image
     for idx in range(args.number):
+        font_type = cv2.FONT_HERSHEY_TRIPLEX
+        font_scale = 1.
+        font_thickness = 2
+        font_color = (255, 255, 255)
+
+        # Calculate height and width of the text information
+        info_str = '{} {:.3f}'.format(args.measure.upper(), new_slice_list[idx].measurement)
+        info_size = cv2.getTextSize(info_str, font_type, font_scale, font_thickness)
+        info_height, info_width = info_size[0][1], info_size[0][0]
+        margin = int(0.2 * info_height)
+        bottom_left = (int((len(methods) + 2) * img_size[1] * 0.5 - info_width * 0.5),
+                       int(img_size[0] + info_height + 0.5 * margin))  # row and col
+
         img_name = new_slice_list[idx].name
-        canvas = np.zeros((img_size[0], (len(methods) + 2) * img_size[1]), dtype=np.uint8)
+        canvas = np.zeros((img_size[0] + info_height + margin, (len(methods) + 2) * img_size[1], 3), dtype=np.uint8)
 
-        ct_img = cv2.imread(os.path.join('../ct', img_name), cv2.IMREAD_GRAYSCALE)
-        mri_img = cv2.imread(os.path.join('../gt', img_name), cv2.IMREAD_GRAYSCALE)
+        ct_img = cv2.imread(os.path.join('../ct', img_name))  # read 3 channel data
+        mri_img = cv2.imread(os.path.join('../gt', img_name))  # read 3 channel data
 
-        canvas[:, :img_size[1]] = ct_img
-        canvas[:, (len(methods)+1)*img_size[1]:] = mri_img
+        canvas[:-info_height-margin, :img_size[1], :] = ct_img
+        canvas[:-info_height-margin, (len(methods)+1)*img_size[1]:, :] = mri_img
 
         for idx_method, method_name in enumerate(methods):
-            img = cv2.imread(os.path.join('../{}'.format(method_name), img_name), cv2.IMREAD_GRAYSCALE)
-            canvas[:, (idx_method+1)*img_size[1]:(idx_method+2)*img_size[1]] = img
+            img = cv2.imread(os.path.join('../{}'.format(method_name), img_name))  # read 3 channel data
+            canvas[:-info_height-margin, (idx_method+1)*img_size[1]:(idx_method+2)*img_size[1], :] = img
 
+        # Add text information
+        cv2.putText(canvas, info_str, bottom_left,  font_type, font_scale, font_color, thickness=font_thickness)
         cv2.imwrite(os.path.join(save_folder, img_name), canvas)
 
 
