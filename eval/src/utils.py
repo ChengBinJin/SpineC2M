@@ -9,6 +9,7 @@ import xlsxwriter
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.measure import compare_ssim
+from scipy.stats import pearsonr
 
 
 def write_to_csv(data_list, method_names, img_names):
@@ -26,12 +27,14 @@ def write_to_csv(data_list, method_names, img_names):
     mean_mse = np.mean(data_list[1], axis=1)
     mean_psnr = np.mean(data_list[2], axis=1)
     mean_ssim = np.mean(data_list[3], axis=1)
+    mean_pcc = np.mean(data_list[4], axis=1)
     std_mae = np.std(data_list[0], axis=1)
     std_mse = np.std(data_list[1], axis=1)
     std_psnr = np.std(data_list[2], axis=1)
     std_ssim = np.std(data_list[3], axis=1)
+    std_pcc = np.std(data_list[4], axis=1)
 
-    attributes = ['No', 'Name', 'MAE', 'RMSE', 'PSNR', 'SSIM']
+    attributes = ['No', 'Name', 'MAE', 'RMSE', 'PSNR', 'SSIM', 'PCC']
     for idx in range(len(method_names)):
         worksheet = workbook.add_worksheet(name=method_names[idx])
         for attr_idx in range(len(attributes)):
@@ -52,12 +55,14 @@ def write_to_csv(data_list, method_names, img_names):
         worksheet.write(num_tests+1, 3, mean_mse[idx], xlsFormate)
         worksheet.write(num_tests+1, 4, mean_psnr[idx], xlsFormate)
         worksheet.write(num_tests+1, 5, mean_ssim[idx], xlsFormate)
+        worksheet.write(num_tests+1, 6, mean_pcc[idx], xlsFormate)
 
         worksheet.write(num_tests+2, 1, 'Std', xlsFormate)
         worksheet.write(num_tests+2, 2, std_mae[idx], xlsFormate)
         worksheet.write(num_tests+2, 3, std_mse[idx], xlsFormate)
         worksheet.write(num_tests+2, 4, std_psnr[idx], xlsFormate)
         worksheet.write(num_tests+2, 5, std_ssim[idx], xlsFormate)
+        worksheet.write(num_tests+2, 6, std_pcc[idx], xlsFormate)
 
     workbook.close()
 
@@ -81,8 +86,9 @@ def all_files_under(path, extension=None, append_path=True, sort=True):
 
 
 def draw_box_plot(data_list, method_names):
-    filenames = ['MAE', 'RMSE', 'PSNR', 'SSIM']
-    expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)', ' (higher is better)']
+    filenames = ['MAE', 'RMSE', 'PSNR', 'SSIM', 'PCC']
+    expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)', ' (higher is better)',
+                   '(higher is better)']
     colors = ['red', 'green', 'blue']  # ['blue', 'red', 'green', 'yellow']
 
     for idx, data in enumerate(data_list):
@@ -99,7 +105,7 @@ def draw_box_plot(data_list, method_names):
         x_vals, y_vals = [], []
         for i in range(data_list[0].shape[0]):
             # move x coordinate to not overlapping
-            x_vals.append(np.random.normal(i + 0.7, 0.05, data.shape[1]))
+            x_vals.append(np.random.normal(i + 0.7, 0.04, data.shape[1]))
             y_vals.append(data[i, :].tolist())
 
         for x_val, y_val, color in zip(x_vals, y_vals, colors):
@@ -137,3 +143,8 @@ def peak_signal_to_noise_ratio(pred, gt):
 def structural_similarity_index(pred, gt):
     # Use skimage.measure li
     return compare_ssim(gt, pred, data_range=pred.max() - pred.min())
+
+
+def pearson_correlation_coefficient(pred, gt):
+    coeff, _ = pearsonr(gt.ravel(), pred.ravel())
+    return coeff

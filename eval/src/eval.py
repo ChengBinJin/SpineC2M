@@ -21,10 +21,10 @@ def main(gt, methods):
         filenames = utils.all_files_under(os.path.join('../', method), extension='.jpg')
         filenames_list.append(filenames)
 
-    mae_overall, rmse_overall, psnr_overall, ssim_overall = [], [], [], []
+    mae_overall, rmse_overall, psnr_overall, ssim_overall, pcc_overall = [], [], [], [], []
     for idx_method in range(len(methods)):
         # print(methods[idx_method])
-        mae_method, rmse_method, psnr_method, ssim_method = [], [], [], []
+        mae_method, rmse_method, psnr_method, ssim_method, pcc_method = [], [], [], [], []
 
         for idx_name in range(len(gt_names)):
             # read gt and prediction image
@@ -40,6 +40,7 @@ def main(gt, methods):
             rmse = utils.root_mean_square_error(pred_img, gt_img)
             psnr = utils.peak_signal_to_noise_ratio(pred_img, gt_img)
             ssim = utils.structural_similarity_index(pred_img, gt_img)
+            pcc = utils.pearson_correlation_coefficient(pred_img, gt_img)
 
             if np.mod(idx_name, 300) == 0:
                 print('Method: {}, idx: {}'.format(methods[idx_method], idx_name))
@@ -49,29 +50,33 @@ def main(gt, methods):
             rmse_method.append(rmse)
             psnr_method.append(psnr)
             ssim_method.append(ssim)
+            pcc_method.append(pcc)
 
         # list to np.array
         mae_method = np.asarray(mae_method)
         mse_method = np.asarray(rmse_method)
         psnr_method = np.asarray(psnr_method)
         ssim_method = np.asarray(ssim_method)
+        pcc_method = np.asarray(pcc_method)
 
         # collect all methods results
         mae_overall.append(mae_method)
         rmse_overall.append(mse_method)
         psnr_overall.append(psnr_method)
         ssim_overall.append(ssim_method)
+        pcc_overall.append(pcc_method)
 
     # list to np.array
     mae_overall = np.asarray(mae_overall)
     rmse_overall = np.asarray(rmse_overall)
     psnr_overall = np.asarray(psnr_overall)
     ssim_overall = np.asarray(ssim_overall)
+    pcc_overall = np.asarray(pcc_overall)
 
     # draw boxplot
-    utils.draw_box_plot([mae_overall, rmse_overall, psnr_overall, ssim_overall], methods)
+    utils.draw_box_plot([mae_overall, rmse_overall, psnr_overall, ssim_overall, pcc_overall], methods)
     # write to csv file
-    utils.write_to_csv([mae_overall, rmse_overall, psnr_overall, ssim_overall], methods, gt_names)
+    utils.write_to_csv([mae_overall, rmse_overall, psnr_overall, ssim_overall, pcc_overall], methods, gt_names)
 
 
 if __name__ == '__main__':
