@@ -169,7 +169,7 @@ class Solver(object):
                                       self.ct_out_dir)
                 iter_time += 1
 
-            print('Avg. PT: {:.2f} msec.'.format(total_time / self.dataset.num_tests * 1000.))
+            logger.info('Avg. PT: {:.2f} msec.'.format(total_time / self.dataset.num_tests * 1000.))
 
         except KeyboardInterrupt:
             coord.request_stop()
