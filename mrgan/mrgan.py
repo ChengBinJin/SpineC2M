@@ -32,14 +32,12 @@ class MRGAN(object):
         self.img_size = img_size
         self.data_path = data_path
         self.log_path = log_path
+        self.L1_lambda = self.flags.L1_lambda
+        self.is_lsgan = self.flags.is_LSGAN  # True: use lsgan (mean squared error), False: use cross entropy loss
 
-        # True: use lsgan (mean squared error)
-        # False: use cross entropy loss
-        self.use_lsgan = True
-        self.use_sigmoid = not self.use_lsgan
         # [instance|batch] use instance norm or batch norm, default: instance
         self.norm = 'instane'
-        self.lambda1, self.lambda2, self.L1_lambda = 10.0, 10.0, 100.0
+        self.lambda1, self.lambda2 = 10.0, 10.0
         self.ngf, self.ndf = 64, 64
         self.real_label = 0.9
         self.start_decay_step = int(self.flags.iters / 2)
@@ -69,11 +67,11 @@ class MRGAN(object):
         self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
         self.Dy_dis = Discriminator(name='Dy', ndf=self.ndf, norm=self.norm, _ops=self._Dy_dis_train_ops,
-                                    use_sigmoid=self.use_sigmoid)
+                                    is_lsgan=self.is_lsgan)
         self.F_gen = Generator(name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._F_gen_train_ops)
         self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops,
-                                    use_sigmoid=self.use_sigmoid)
+                                    is_lsgan=self.is_lsgan)
 
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
                              is_train=self.flags.is_train)
@@ -96,18 +94,18 @@ class MRGAN(object):
         self.yx_fake_pairs = tf.concat([self.y_imgs, self.fake_x_imgs], axis=3)
 
         # X -> Y
-        self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs, use_lsgan=self.use_lsgan)
+        self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs, is_lsgan=self.is_lsgan)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss
         self.Dy_dis_loss = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph,
-                                                   use_lsgan=self.use_lsgan)
+                                                   is_lsgan=self.is_lsgan)
 
         # Y -> X
-        self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs, use_lsgan=self.use_lsgan)
+        self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs, is_lsgan=self.is_lsgan)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss
         self.Dx_dis_loss = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph,
-                                                   use_lsgan=self.use_lsgan)
+                                                   is_lsgan=self.is_lsgan)
 
         G_optim = self.optimizer(loss=self.G_loss, variables=self.G_gen.variables, name='Adam_G')
         Dy_optim = self.optimizer(loss=self.Dy_dis_loss, variables=self.Dy_dis.variables, name='Adam_Dy')
@@ -149,25 +147,35 @@ class MRGAN(object):
         loss = self.L1_lambda * cond_loss
         return loss
 
-    def generator_loss(self, dis_obj, fake_img, use_lsgan=True):
-        if use_lsgan:
+    def generator_loss(self, dis_obj, fake_img, is_lsgan=True):
+        if is_lsgan:
             # use mean squared error
             loss = 0.5 * tf.reduce_mean(tf.squared_difference(dis_obj(fake_img), self.real_label))
         else:
             # heuristic, non-saturating loss (I don't understand here!)
             # loss = -tf.reduce_mean(tf.log(dis_obj(fake_img) + self.eps)) / 2.  (???)
-            loss = -tf.reduce_mean(tf.log(dis_obj(fake_img) + self.eps))
+            # loss = -tf.reduce_mean(tf.log(dis_obj(fake_img) + self.eps))
+            d_logit_fake = dis_obj(fake_img)
+            loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
+
         return loss
 
-    def discriminator_loss(self, dis_obj, real_img, fake_img, use_lsgan=True):
-        if use_lsgan:
+    def discriminator_loss(self, dis_obj, real_img, fake_img, is_lsgan=True):
+        if is_lsgan:
             # use mean squared error
             error_real = tf.reduce_mean(tf.squared_difference(dis_obj(real_img), self.real_label))
             error_fake = tf.reduce_mean(tf.square(dis_obj(fake_img)))
         else:
             # use cross entropy
-            error_real = -tf.reduce_mean(tf.log(dis_obj(real_img) + self.eps))
-            error_fake = -tf.reduce_mean(tf.log(1. - dis_obj(fake_img) + self.eps))
+            # error_real = -tf.reduce_mean(tf.log(dis_obj(real_img) + self.eps))
+            # error_fake = -tf.reduce_mean(tf.log(1. - dis_obj(fake_img) + self.eps))
+            d_logit_real = dis_obj(real_img)
+            d_logit_fake = dis_obj(fake_img)
+            error_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=d_logit_real, labels=tf.ones_like(d_logit_real)))
+            error_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake)))
 
         loss = 0.5 * (error_real + error_fake)
         return loss
@@ -216,10 +224,10 @@ class MRGAN(object):
             ord_output = collections.OrderedDict([('cur_iter', iter_time), ('tar_iters', self.flags.iters),
                                                   ('batch_size', self.flags.batch_size),
                                                   ('G_loss', loss[0]), ('G_gen_loss', loss[1]),
-                                                  ('G_cond_loss', loss[2]), ('cycle_loss', loss[3]),
+                                                  ('G_cond_loss', loss[2]), ('G_cycle_loss', loss[3]),
                                                   ('Dy_loss', loss[4]),
                                                   ('F_loss', loss[5]), ('F_gen_loss', loss[6]),
-                                                  ('F_cond_loss', loss[7]), ('cycle_loss', loss[3]),
+                                                  ('F_cond_loss', loss[7]), ('F_cycle_loss', loss[3]),
                                                   ('Dx_loss', loss[8]),
                                                   ('dataset', self.flags.dataset),
                                                   ('gpu_index', self.flags.gpu_index)])
@@ -333,13 +341,13 @@ class Generator(object):
 
 
 class Discriminator(object):
-    def __init__(self, name='', ndf=64, norm='instance', _ops=None, use_sigmoid=False):
+    def __init__(self, name='', ndf=64, norm='instance', _ops=None, is_lsgan=False):
         self.name = name
         self.ndf = ndf
         self.norm = norm
         self._ops = _ops
         self.reuse = False
-        self.use_sigmoid = use_sigmoid
+        self.is_lsgan = is_lsgan
 
     def __call__(self, x):
         with tf.variable_scope(self.name, reuse=self.reuse):
@@ -372,10 +380,7 @@ class Discriminator(object):
             conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
                                     name='conv5_conv', is_print=True)
 
-            if self.use_sigmoid:
-                output = tf_utils.sigmoid(conv5, name='output_sigmoid', is_print=True)
-            else:
-                output = tf.identity(conv5, name='output_without_sigmoid')
+            output = tf.identity(conv5, name='output_without_sigmoid')
 
             # set reuse=True for next call
             self.reuse = True

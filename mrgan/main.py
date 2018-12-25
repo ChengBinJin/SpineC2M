@@ -11,10 +11,12 @@ from solver import Solver
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
+tf.flags.DEFINE_bool('is_LSGAN', True, 'discriminator loss function, default: True')
+tf.flags.DEFINE_float('L1_lambda', 100., 'L1 lambda for conditional voxel-wise loss, default: 100.')
+tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
+
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
 tf.flags.DEFINE_string('dataset', 'spine06', 'dataset name, default: spine06')
-
-tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 2e-4, 'initial leraning rate for Adam, default: 0.0002')
 tf.flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam, default: 0.5')
 

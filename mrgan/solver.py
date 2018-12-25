@@ -90,10 +90,12 @@ class Solver(object):
 
         if self.flags.is_train:
             logger.info('gpu_index: {}'.format(self.flags.gpu_index))
+            logger.info('is_LSGAN: {}'.format(self.flags.is_LSGAN))
+            logger.info('L1_lambda: {}'.format(self.flags.L1_lambda))
+            logger.info('is_train: {}'.format(self.flags.is_train))
+
             logger.info('batch_size: {}'.format(self.flags.batch_size))
             logger.info('dataset: {}'.format(self.flags.dataset))
-
-            logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('learning_rate: {}'.format(self.flags.learning_rate))
             logger.info('beta1: {}'.format(self.flags.beta1))
 
