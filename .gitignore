@@ -14,3 +14,10 @@ eval/discogan/
 .DS_Store
 */.DS_Store
 eval/src/*/*.jpg
+eval/ct_test/
+eval/cyclegan_test/
+eval/discogan_test/
+eval/gt_test/
+eval/mrgan_test/
+eval/pix2pix_test/
+eval/mrgan/

@@ -43,7 +43,7 @@ class Solver(object):
     def _make_folders(self):
         if self.flags.is_train:  # train stage
             if self.flags.load_model is None:
-                cur_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+                cur_time = datetime.now().strftime("%Y%m%d-%H%M")
                 self.model_out_dir = "{}/model/{}".format(self.flags.dataset, cur_time)
                 if not os.path.isdir(self.model_out_dir):
                     os.makedirs(self.model_out_dir)
@@ -62,7 +62,7 @@ class Solver(object):
         elif not self.flags.is_train:  # test stage
             self.model_out_dir = "{}/model/{}".format(self.flags.dataset, self.flags.load_model)
             self.test_out_dir = "{}/test/{}".format(self.flags.dataset, self.flags.load_model)
-            self.eval_out_dir = "../eval/cyclegan"
+            self.eval_out_dir = "../eval/mrgan"
             self.gt_out_dir = "../eval/gt"
             self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, self.flags.load_model)
 

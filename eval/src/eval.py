@@ -11,7 +11,7 @@ import numpy as np
 import utils as utils
 
 
-def main(gt, methods):
+def main(gt, methods, display_names):
     # read gt image addresses
     gt_names = utils.all_files_under(os.path.join('../', gt), extension='.jpg')
 
@@ -54,14 +54,14 @@ def main(gt, methods):
 
         # list to np.array
         mae_method = np.asarray(mae_method)
-        mse_method = np.asarray(rmse_method)
+        rmse_method = np.asarray(rmse_method)
         psnr_method = np.asarray(psnr_method)
         ssim_method = np.asarray(ssim_method)
         pcc_method = np.asarray(pcc_method)
 
         # collect all methods results
         mae_overall.append(mae_method)
-        rmse_overall.append(mse_method)
+        rmse_overall.append(rmse_method)
         psnr_overall.append(psnr_method)
         ssim_overall.append(ssim_method)
         pcc_overall.append(pcc_method)
@@ -74,13 +74,14 @@ def main(gt, methods):
     pcc_overall = np.asarray(pcc_overall)
 
     # draw boxplot
-    utils.draw_box_plot([mae_overall, rmse_overall, psnr_overall, ssim_overall, pcc_overall], methods)
+    utils.draw_box_plot([mae_overall, rmse_overall, psnr_overall, ssim_overall, pcc_overall], display_names)
     # write to csv file
     utils.write_to_csv([mae_overall, rmse_overall, psnr_overall, ssim_overall, pcc_overall], methods, gt_names)
 
 
 if __name__ == '__main__':
     gt_ = 'gt'
-    methods_ = ['pix2pix', 'cyclegan', 'discogan']
+    methods_ = ['pix2pix', 'cyclegan', 'discogan', 'mrgan']
+    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN']
 
-    main(gt_, methods_)
+    main(gt_, methods_, display_names_)

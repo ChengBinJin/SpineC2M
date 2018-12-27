@@ -89,14 +89,15 @@ def draw_box_plot(data_list, method_names):
     filenames = ['MAE', 'RMSE', 'PSNR', 'SSIM', 'PCC']
     expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)', ' (higher is better)',
                    '(higher is better)']
-    colors = ['red', 'green', 'blue']  # ['blue', 'red', 'green', 'yellow']
+    colors = ['red', 'green', 'blue', 'yellow']  # purple
 
     for idx, data in enumerate(data_list):
-        box = plt.boxplot(np.transpose(data), patch_artist=True, showmeans=True, sym='r+', vert=True)
+        fig1, ax1 = plt.subplots(figsize=(2.5*len(method_names), 6))
+        box = ax1.boxplot(np.transpose(data), patch_artist=True, showmeans=True, sym='r+', vert=True)
 
         # connect mean values
         y = data.mean(axis=1)
-        plt.plot(range(1, len(method_names)+1), y, 'r--')
+        ax1.plot(range(1, len(method_names)+1), y, 'r--')
 
         for patch, color in zip(box['boxes'], colors):
             patch.set(facecolor=color, alpha=0.5, linewidth=1)
@@ -109,10 +110,18 @@ def draw_box_plot(data_list, method_names):
             y_vals.append(data[i, :].tolist())
 
         for x_val, y_val, color in zip(x_vals, y_vals, colors):
-            plt.scatter(x_val, y_val, s=5, c=color, alpha=0.5)
+            ax1.scatter(x_val, y_val, s=5, c=color, alpha=0.5)
 
-        ax = plt.axes()
-        ax.yaxis.grid()  # horizontal lines
+        # ax = plt.axes()
+        # ax.yaxis.grid()  # horizontal lines
+        # plt.xticks(range(1, len(method_names)+1), method_names)
+        # plt.setp(box['medians'], color='black')
+        # plt.title(filenames[idx] + expressions[idx])
+        # plt.savefig(filenames[idx] + '.jpg', dpi=300)
+        # plt.close()
+
+        # ax = plt.axes()
+        ax1.yaxis.grid()  # horizontal lines
         plt.xticks(range(1, len(method_names)+1), method_names)
         plt.setp(box['medians'], color='black')
         plt.title(filenames[idx] + expressions[idx])

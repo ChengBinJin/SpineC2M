@@ -65,20 +65,20 @@ def cal_meausre(methods, measure, case_dict, num_cases_require):
 
 def horizontal_bar_plot(methods, mean_arrs, var_arrs, num_cases_require):
     index = np.arange(num_cases_require)
-    bar_width = 0.25
+    bar_width = 0.2
     opacity = 0.4
     error_config = {'ecolor': '0.3'}
-    colors = ['r', 'g', 'b']
+    colors = ['red', 'green', 'blue', 'yellow']  # ['r', 'g', 'b']
 
-    fig, ax = plt.subplots(figsize=(20, 10))
+    fig, ax = plt.subplots(figsize=(5*len(methods), 10))
     # Add three meathods bar plot
     for idx in range(len(methods)):
         ax.bar(index + idx * bar_width, mean_arrs[idx], bar_width, alpha=opacity, color=colors[idx],
                 yerr=var_arrs[idx], error_kw=error_config, label=methods[idx])
 
-    ax.set_ylabel('SSIM (HU)', fontsize=16)
+    ax.set_ylabel('SSIM', fontsize=16)
     ax.set_xlabel('Subject', fontsize=16)
-    ax.set_xticks(index + bar_width)
+    ax.set_xticks(index + bar_width * len(methods) / 2 - bar_width / 2)
     ax.set_xticklabels([str(case_id).zfill(2) for case_id in range(1, num_cases_require+1)], fontsize=14)
     ax.set_yticks(np.arange(0., 0.5, 0.05))
     ax.set_yticklabels(['{:.2f}'.format(ytick) for ytick in np.arange(0., 0.5, 0.05)], fontsize=14)
@@ -88,7 +88,7 @@ def horizontal_bar_plot(methods, mean_arrs, var_arrs, num_cases_require):
     plt.savefig('CaseBarPlot.jpg', dpi=600)
     plt.close()
 
-def main(methods, measure, num_cases_require):
+def main(methods, display_names, measure, num_cases_require):
     # Read gt image paths
     gt_names = utils.all_files_under('../gt', extension='.jpg')
     num_cases, case_dict = count_cases(gt_names)  # sort and save img paths according to subject id
@@ -97,12 +97,13 @@ def main(methods, measure, num_cases_require):
     mean_arrs, var_arrs = cal_meausre(methods, measure, case_dict, num_cases_require)
 
     # Horizontal bar plot
-    horizontal_bar_plot(methods, mean_arrs, var_arrs, num_cases_require)
+    horizontal_bar_plot(display_names, mean_arrs, var_arrs, num_cases_require)
 
 
 if __name__ == '__main__':
-    target_methods = ['pix2pix', 'cyclegan', 'discogan']
+    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan']
+    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN']
     target_measusre = 'ssim'
     num_cases_require_ = 20
 
-    main(target_methods, target_measusre, num_cases_require_)
+    main(target_methods, display_names_, target_measusre, num_cases_require_)
