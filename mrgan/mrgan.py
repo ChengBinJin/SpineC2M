@@ -42,7 +42,7 @@ class MRGAN(object):
         self.real_label = 0.9
         self.start_decay_step = int(self.flags.iters / 2)
         self.decay_steps = self.flags.iters - self.start_decay_step
-        self.eps = 1e-12
+        # self.eps = 1e-12
 
         self._G_gen_train_ops, self._F_gen_train_ops = [], []
         self._Dy_dis_train_ops, self._Dx_dis_train_ops = [], []

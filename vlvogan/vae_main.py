@@ -18,6 +18,8 @@ tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: Tru
 tf.flags.DEFINE_bool('learning_rate', 2e-4, 'initial learning rate for Adam, default: 0.0002')
 tf.flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam, default: 0.5')
 tf.flags.DEFINE_integer('z_dim', 128, 'dimension of z vector, default: 128')
+tf.flags.DEFINE_float('beta', 1.0, 'weight for latent vector constrain, default: 1.0')
+tf.flags.DEFINE_float('k', 0.0, 'margin in latent vector constrain, default: 0.0' )
 
 tf.flags.DEFINE_integer('iters', 200000, 'number of iterations, default: 200000')
 tf.flags.DEFINE_integer('print_freq', 100, 'print frequency for loss, default: 100')

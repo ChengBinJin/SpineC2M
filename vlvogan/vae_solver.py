@@ -32,7 +32,8 @@ class Solver(object):
         self._init_logger()
 
         self.dataset = Dataset(self.flags.dataset, self.flags, log_path=self.log_out_dir)
-        self.model = VAE(self.sess, self.flags, self.dataset, log_path=self.log_out_dir)
+        self.model = VAE(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
+                         log_path=self.log_out_dir)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
@@ -86,6 +87,8 @@ class Solver(object):
             logger.info('learning_rate: {}'.format(self.flags.learning_rate))
             logger.info('beta1: {}'.format(self.flags.beta1))
             logger.info('z_dim: {}'.format(self.flags.z_dim))
+            logger.info('beta: {}'.format(self.flags.beta))
+            logger.info('k: {}'.format(self.flags.k))
 
             logger.info('iters: {}'.format(self.flags.iters))
             logger.info('print_freq: {}'.format(self.flags.print_freq))
