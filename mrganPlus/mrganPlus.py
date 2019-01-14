@@ -32,6 +32,13 @@ class MRGANPLUS(object):
         self.img_size = img_size
         self.data_path = data_path
         self.log_path = log_path
+        # Gradient difference loss (GDL) term
+        self.gdl_weight = self.flags.gdl_weight
+        self.is_gdl_loss = self.flags.is_gdl  # True: use gradient difference loss
+        # Percepual loss term
+        self.perceptual_weight = self.flags.perceptual_weight
+        self.is_perceptual_loss = self.flags.is_perceptual
+        # voxel-wise loss term
         self.L1_lambda = self.flags.L1_lambda
         self.is_lsgan = self.flags.is_LSGAN  # True: use lsgan (mean squared error), False: use cross entropy loss
 
@@ -53,7 +60,7 @@ class MRGANPLUS(object):
 
     def _init_logger(self):
         if self.flags.is_train:
-            tf_utils._init_logger(self.log_path)
+            tf_utils.init_logger(self.log_path)
 
     def _build_net(self):
         # tfph: TensorFlow PlaceHolder
@@ -96,14 +103,16 @@ class MRGANPLUS(object):
         # X -> Y
         self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs, is_lsgan=self.is_lsgan)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
-        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss
+        self.G_gdl_loss = self.gradient_difference_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
+        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss
         self.Dy_dis_loss = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph,
                                                    is_lsgan=self.is_lsgan)
 
         # Y -> X
         self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs, is_lsgan=self.is_lsgan)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
-        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss
+        self.F_gdl_loss = self.gradient_difference_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
+        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss
         self.Dx_dis_loss = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph,
                                                    is_lsgan=self.is_lsgan)
 
@@ -147,6 +156,18 @@ class MRGANPLUS(object):
         loss = self.L1_lambda * cond_loss
         return loss
 
+    def gradient_difference_loss(self, preds, gts):
+        gdl_loss = 0.
+        if self.is_gdl_loss:
+            preds_dy, preds_dx = tf.image.image_gradients(preds)
+            gts_dy, gts_dx = tf.image.image_gradients(gts)
+
+            gdl_loss = self.gdl_weight * tf.reduce_mean(tf.abs(tf.abs(preds_dy) - tf.abs(gts_dy)) +
+                                                        tf.abs(tf.abs(preds_dx) - tf.abs(gts_dx)))
+
+        return gdl_loss
+
+
     def generator_loss(self, dis_obj, fake_img, is_lsgan=True):
         if is_lsgan:
             # use mean squared error
@@ -179,10 +200,12 @@ class MRGANPLUS(object):
         tf.summary.scalar('loss/cycle', self.cycle_loss)
         tf.summary.scalar('loss/G_loss', self.G_loss)
         tf.summary.scalar('loss/G_gen', self.G_gen_loss)
+        tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
         tf.summary.scalar('loss/G_cond', self.G_cond_loss)
         tf.summary.scalar('loss/Dy_dis', self.Dy_dis_loss)
         tf.summary.scalar('loss/F_loss', self.F_loss)
         tf.summary.scalar('loss/F_gen', self.F_gen_loss)
+        tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
         tf.summary.scalar('loss/F_cond', self.F_cond_loss)
         tf.summary.scalar('loss/Dx_dis', self.Dx_dis_loss)
         self.summary_op = tf.summary.merge_all()
@@ -190,15 +213,19 @@ class MRGANPLUS(object):
     def train_step(self):
         # self.xy_fake_pairs
         xy_fake_pairs, yx_fake_pairs = self.sess.run([self.xy_fake_pairs, self.yx_fake_pairs])
-        ops = [self.optims, self.G_loss, self.G_gen_loss, self.G_cond_loss, self.cycle_loss,
-               self.Dy_dis_loss, self.F_loss, self.F_gen_loss, self.F_cond_loss, self.Dx_dis_loss, self.summary_op]
+        ops = [self.optims, self.G_loss, self.G_gen_loss,
+               self.G_cond_loss, self.G_gdl_loss, self.cycle_loss,
+               self.Dy_dis_loss, self.F_loss, self.F_gen_loss,
+               self.F_cond_loss, self.F_gdl_loss, self.Dx_dis_loss,
+               self.summary_op]
         feed_dict = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj.query(xy_fake_pairs),
                      self.yx_fake_pairs_tfph: self.fake_yx_pool_obj.query(yx_fake_pairs)}
 
-        _, G_loss, G_gen_loss, G_cond_loss, cycle_loss, Dy_loss, F_loss, F_gen_loss, F_cond_loss, Dx_loss, summary \
-            = self.sess.run(ops, feed_dict=feed_dict)
+        _, G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, cycle_loss, Dy_loss, \
+        F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, Dx_loss, summary = self.sess.run(ops, feed_dict=feed_dict)
 
-        return [G_loss, G_gen_loss, G_cond_loss, cycle_loss, Dy_loss, F_loss, F_gen_loss, F_cond_loss, Dx_loss], summary
+        return [G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, cycle_loss, Dy_loss,
+                F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, Dx_loss], summary
 
     def test_step(self):
         x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
@@ -219,11 +246,12 @@ class MRGANPLUS(object):
             ord_output = collections.OrderedDict([('cur_iter', iter_time), ('tar_iters', self.flags.iters),
                                                   ('batch_size', self.flags.batch_size),
                                                   ('G_loss', loss[0]), ('G_gen_loss', loss[1]),
-                                                  ('G_cond_loss', loss[2]), ('G_cycle_loss', loss[3]),
-                                                  ('Dy_loss', loss[4]),
-                                                  ('F_loss', loss[5]), ('F_gen_loss', loss[6]),
-                                                  ('F_cond_loss', loss[7]), ('F_cycle_loss', loss[3]),
-                                                  ('Dx_loss', loss[8]),
+                                                  ('G_cond_loss', loss[2]), ('G_gdl_loss', loss[3]),
+                                                  ('G_cycle_loss', loss[4]), ('Dy_loss', loss[5]),
+                                                  ('F_loss', loss[6]), ('F_gen_loss', loss[7]),
+                                                  ('F_cond_loss', loss[8]), ('F_gdl_loss', loss[9]),
+                                                  ('F_cycle_loss', loss[4]),
+                                                  ('Dx_loss', loss[10]),
                                                   ('dataset', self.flags.dataset),
                                                   ('gpu_index', self.flags.gpu_index)])
 

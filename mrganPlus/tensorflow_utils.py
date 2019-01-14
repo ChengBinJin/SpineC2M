@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)  # logger
 logger.setLevel(logging.INFO)
 
 
-def _init_logger(log_path):
+def init_logger(log_path):
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
     # file handler
     file_handler = logging.FileHandler(os.path.join(log_path, 'model.log'))

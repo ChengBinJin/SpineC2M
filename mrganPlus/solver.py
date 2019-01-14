@@ -62,7 +62,7 @@ class Solver(object):
         elif not self.flags.is_train:  # test stage
             self.model_out_dir = "{}/model/{}".format(self.flags.dataset, self.flags.load_model)
             self.test_out_dir = "{}/test/{}".format(self.flags.dataset, self.flags.load_model)
-            self.eval_out_dir = "../eval/mrgan"
+            self.eval_out_dir = "../eval/mrganPlus"
             self.gt_out_dir = "../eval/gt"
             self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, self.flags.load_model)
 
@@ -90,7 +90,11 @@ class Solver(object):
 
         if self.flags.is_train:
             logger.info('gpu_index: {}'.format(self.flags.gpu_index))
+            logger.info('is_gdl: {}'.format(self.flags.is_gdl))
+            logger.info('is_perceputal: {}'.format(self.flags.is_perceptual))
             logger.info('is_LSGAN: {}'.format(self.flags.is_LSGAN))
+            logger.info('gdl_weight: {}'.format(self.flags.gdl_weight))
+            logger.info('perceptual_weight: {}'.format(self.flags.perceptual_weight))
             logger.info('L1_lambda: {}'.format(self.flags.L1_lambda))
             logger.info('is_train: {}'.format(self.flags.is_train))
 
