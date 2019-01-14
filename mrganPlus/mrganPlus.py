@@ -18,6 +18,7 @@ import tensorflow as tf
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
 import utils as utils
+from vgg16 import VGG16
 from reader import Reader
 
 logger = logging.getLogger(__name__)  # logger
@@ -79,6 +80,7 @@ class MRGANPLUS(object):
                                _ops=self._F_gen_train_ops)
         self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops,
                                     is_lsgan=self.is_lsgan)
+        self.vggModel = VGG16(name='VGG16_Pretrained')
 
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
                              is_train=self.flags.is_train)
@@ -104,7 +106,8 @@ class MRGANPLUS(object):
         self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs, is_lsgan=self.is_lsgan)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_gdl_loss = self.gradient_difference_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
-        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss
+        self.G_perceptual_loss = self.perceptual_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
+        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + self.G_perceptual_loss
         self.Dy_dis_loss = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph,
                                                    is_lsgan=self.is_lsgan)
 
@@ -112,7 +115,8 @@ class MRGANPLUS(object):
         self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs, is_lsgan=self.is_lsgan)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_gdl_loss = self.gradient_difference_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
-        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss
+        self.F_perceputal_loss = self.perceptual_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
+        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + self.F_perceputal_loss
         self.Dx_dis_loss = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph,
                                                    is_lsgan=self.is_lsgan)
 
@@ -167,6 +171,15 @@ class MRGANPLUS(object):
 
         return gdl_loss
 
+    def perceptual_loss_fn(self, preds, gts):
+        perceptual_loss = 0.
+        if self.is_perceptual_loss:
+            preds_feature = self.vggModel(preds)
+            gts_feature = self.vggModel(gts)
+            perceptual_loss = self.perceptual_weight * tf.reduce_mean(tf.abs(preds_feature - gts_feature))
+
+        return perceptual_loss
+
 
     def generator_loss(self, dis_obj, fake_img, is_lsgan=True):
         if is_lsgan:
@@ -200,32 +213,36 @@ class MRGANPLUS(object):
         tf.summary.scalar('loss/cycle', self.cycle_loss)
         tf.summary.scalar('loss/G_loss', self.G_loss)
         tf.summary.scalar('loss/G_gen', self.G_gen_loss)
-        tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
         tf.summary.scalar('loss/G_cond', self.G_cond_loss)
+        tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
+        tf.summary.scalar('loss/G_perceptual', self.G_perceptual_loss)
         tf.summary.scalar('loss/Dy_dis', self.Dy_dis_loss)
         tf.summary.scalar('loss/F_loss', self.F_loss)
         tf.summary.scalar('loss/F_gen', self.F_gen_loss)
-        tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
         tf.summary.scalar('loss/F_cond', self.F_cond_loss)
+        tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
+        tf.summary.scalar('loss/F_perceptual', self.F_perceputal_loss)
         tf.summary.scalar('loss/Dx_dis', self.Dx_dis_loss)
         self.summary_op = tf.summary.merge_all()
 
     def train_step(self):
         # self.xy_fake_pairs
         xy_fake_pairs, yx_fake_pairs = self.sess.run([self.xy_fake_pairs, self.yx_fake_pairs])
-        ops = [self.optims, self.G_loss, self.G_gen_loss,
-               self.G_cond_loss, self.G_gdl_loss, self.cycle_loss,
-               self.Dy_dis_loss, self.F_loss, self.F_gen_loss,
-               self.F_cond_loss, self.F_gdl_loss, self.Dx_dis_loss,
+        ops = [self.optims,
+               self.G_loss, self.G_gen_loss, self.G_cond_loss,
+               self.G_gdl_loss, self.G_perceptual_loss, self.cycle_loss, self.Dy_dis_loss,
+               self.F_loss, self.F_gen_loss, self.F_cond_loss,
+               self.F_gdl_loss, self.F_perceputal_loss, self.Dx_dis_loss,
                self.summary_op]
         feed_dict = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj.query(xy_fake_pairs),
                      self.yx_fake_pairs_tfph: self.fake_yx_pool_obj.query(yx_fake_pairs)}
 
-        _, G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, cycle_loss, Dy_loss, \
-        F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, Dx_loss, summary = self.sess.run(ops, feed_dict=feed_dict)
+        _, G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, cycle_loss, Dy_loss, \
+        F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, Dx_loss, \
+        summary = self.sess.run(ops, feed_dict=feed_dict)
 
-        return [G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, cycle_loss, Dy_loss,
-                F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, Dx_loss], summary
+        return [G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, cycle_loss, Dy_loss,
+                F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, Dx_loss], summary
 
     def test_step(self):
         x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
@@ -247,11 +264,12 @@ class MRGANPLUS(object):
                                                   ('batch_size', self.flags.batch_size),
                                                   ('G_loss', loss[0]), ('G_gen_loss', loss[1]),
                                                   ('G_cond_loss', loss[2]), ('G_gdl_loss', loss[3]),
-                                                  ('G_cycle_loss', loss[4]), ('Dy_loss', loss[5]),
-                                                  ('F_loss', loss[6]), ('F_gen_loss', loss[7]),
-                                                  ('F_cond_loss', loss[8]), ('F_gdl_loss', loss[9]),
-                                                  ('F_cycle_loss', loss[4]),
-                                                  ('Dx_loss', loss[10]),
+                                                  ('G_perceptual_loss', loss[4]), ('G_cycle_loss', loss[5]),
+                                                  ('Dy_loss', loss[6]),
+                                                  ('F_loss', loss[7]), ('F_gen_loss', loss[8]),
+                                                  ('F_cond_loss', loss[9]), ('F_gdl_loss', loss[10]),
+                                                  ('F_perceptual_loss', loss[11]), ('F_cycle_loss', loss[5]),
+                                                  ('Dx_loss', loss[12]),
                                                   ('dataset', self.flags.dataset),
                                                   ('gpu_index', self.flags.gpu_index)])
 
