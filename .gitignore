@@ -21,3 +21,7 @@ eval/gt_test/
 eval/mrgan_test/
 eval/pix2pix_test/
 eval/mrgan/
+eval/mrganPlus_w1=1_w2=0
+eval/mrganPlus_w1=10_w2=0
+eval/mrganPlus_w1=100_w2=0
+eval/src/data

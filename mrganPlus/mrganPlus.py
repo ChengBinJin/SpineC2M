@@ -80,7 +80,7 @@ class MRGANPLUS(object):
                                _ops=self._F_gen_train_ops)
         self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops,
                                     is_lsgan=self.is_lsgan)
-        self.vggModel = VGG16(name='VGG16_Pretrained')
+        # self.vggModel = VGG16(name='VGG16_Pretrained')
 
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
                              is_train=self.flags.is_train)
@@ -173,10 +173,10 @@ class MRGANPLUS(object):
 
     def perceptual_loss_fn(self, preds, gts):
         perceptual_loss = 0.
-        if self.is_perceptual_loss:
-            preds_feature = self.vggModel(preds)
-            gts_feature = self.vggModel(gts)
-            perceptual_loss = self.perceptual_weight * tf.reduce_mean(tf.abs(preds_feature - gts_feature))
+        # if self.is_perceptual_loss:
+            # preds_feature = self.vggModel(preds)
+            # gts_feature = self.vggModel(gts)
+            # perceptual_loss = self.perceptual_weight * tf.reduce_mean(tf.abs(preds_feature - gts_feature))
 
         return perceptual_loss
 
