@@ -89,7 +89,7 @@ def draw_box_plot(data_list, method_names):
     filenames = ['MAE', 'RMSE', 'PSNR', 'SSIM', 'PCC']
     expressions = [' (lower is better)', ' (lower is better)', ' (higher is better)', ' (higher is better)',
                    '(higher is better)']
-    colors = ['red', 'green', 'blue', 'yellow']  # purple
+    colors = ['red', 'green', 'blue', 'aquamarine', 'aqua']  # purple
 
     for idx, data in enumerate(data_list):
         fig1, ax1 = plt.subplots(figsize=(2.5*len(method_names), 6))

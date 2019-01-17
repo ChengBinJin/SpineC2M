@@ -35,7 +35,7 @@ def main(methods, display_names, num_tests=4426):
 
 
 if __name__ == '__main__':
-    methods_ = ['pix2pix', 'cyclegan', 'discogan', 'mrgan']
-    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN']
+    methods_ = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'mrganPlus_w1=100_w2=1']
+    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN', 'MR-GAN+']
 
     main(methods_, display_names_)
