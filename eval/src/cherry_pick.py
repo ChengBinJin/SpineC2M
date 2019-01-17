@@ -13,10 +13,10 @@ import numpy as np
 import utils as utils
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--method', dest='method', default='mrgan', type=str,
-                    help='select from [pix2pix|cyclegan|discogan|mrgan]')
+parser.add_argument('--method', dest='method', default='mrganPlus', type=str,
+                    help='select from [pix2pix|cyclegan|discogan|mrgan|mrganPlus]')
 parser.add_argument('--measure', dest='measure', default='ssim', type=str, help='select from [mae|rmse|psnr|ssim]')
-parser.add_argument('--number', dest='number', default=20, type=int, help='number of examples')
+parser.add_argument('--number', dest='number', default=30, type=int, help='number of examples')
 args = parser.parse_args()
 
 
@@ -131,8 +131,8 @@ def main(methods, measures, img_size):
 
 
 if __name__ == '__main__':
-    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan']
-    target_measures = ['mae', 'rmse', 'psnr', 'ssim']
+    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'mrganPlus']
+    target_measures = ['mae', 'rmse', 'psnr', 'ssim', 'pcc']
     img_size_ = (300, 200, 1)
 
     main(target_methods, target_measures, img_size_)
