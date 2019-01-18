@@ -85,7 +85,7 @@ def main(methods, measures, img_size):
     if not flag:
         sys.exit('{}'.format(message))
 
-    save_folder = os.path.join('best{}_{}_{}'.format(args.number, args.measure, args.method))
+    save_folder = 'best{}_{}_{}'.format(args.number, args.measure, args.method)
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
 
@@ -118,12 +118,15 @@ def main(methods, measures, img_size):
         ct_img = cv2.imread(os.path.join('../ct', img_name))  # read 3 channel data
         mri_img = cv2.imread(os.path.join('../gt', img_name))  # read 3 channel data
 
-        canvas[:-info_height-margin, :img_size[1], :] = ct_img
-        canvas[:-info_height-margin, (len(methods)+1)*img_size[1]:, :] = mri_img
+        canvas[:-info_height-margin, :img_size[1], :] = ct_img  # save ct img
+        canvas[:-info_height-margin, (len(methods)+1)*img_size[1]:, :] = mri_img  # save mri img
 
         for idx_method, method_name in enumerate(methods):
             img = cv2.imread(os.path.join('../{}'.format(method_name), img_name))  # read 3 channel data
             canvas[:-info_height-margin, (idx_method+1)*img_size[1]:(idx_method+2)*img_size[1], :] = img
+
+            # calculate difference map
+            utils.difference_map(img, mri_img, save_folder, img_name, method_name)
 
         # Add text information
         cv2.putText(canvas, info_str, bottom_left,  font_type, font_scale, font_color, thickness=font_thickness)

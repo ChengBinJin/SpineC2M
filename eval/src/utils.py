@@ -157,3 +157,24 @@ def structural_similarity_index(pred, gt):
 def pearson_correlation_coefficient(pred, gt):
     coeff, _ = pearsonr(gt.ravel(), pred.ravel())
     return coeff
+
+def difference_map(pred, gt, save_fold, img_name, measure, min_value=0, max_value=500):
+    save_fold = os.path.join(save_fold, measure)
+    if not os.path.isdir(save_fold):
+        os.makedirs(save_fold)
+
+    pred = (pred[:, :, 1]).astype(np.float32)
+    gt = (gt[:, :, 1]).astype(np.float32)
+
+    diff_map = np.abs(pred - gt)
+    diff_map[0, 0] = min_value
+    diff_map[-1, -1] = max_value
+
+    plt.imshow(diff_map, vmin=min_value, vmax=max_value, cmap='afmhot')
+    cb = plt.colorbar(ticks=np.linspace(min_value, max_value, num=3))
+    cb.ax.set_yticklabels(cb.ax.get_yticklabels(), fontsize=12)
+    plt.axis('off')
+    # plt.show()
+
+    plt.savefig(os.path.join(save_fold, img_name), bbox_inches='tight')
+    plt.close()
