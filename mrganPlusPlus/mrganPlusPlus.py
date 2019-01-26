@@ -278,7 +278,6 @@ class MRGANPLUSPLUS(object):
                                                   ('F_cond_loss', loss[10]), ('F_gdl_loss', loss[11]),
                                                   ('F_perceptual_loss', loss[12]), ('F_ssim_loss', loss[13]),
                                                   ('F_cycle_loss', loss[6]), ('Dx_loss', loss[14]),
-                                                  ('dataset', self.flags.dataset),
                                                   ('gpu_index', self.flags.gpu_index)])
 
             utils.print_metrics(iter_time, ord_output)
