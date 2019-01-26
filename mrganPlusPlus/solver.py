@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M-mrgan+ Implementation
+# Tensorflow SpineC2M-mrgan++ Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Cheng-Bin Jin
 # Email: sbkim0407@gmail.com
@@ -14,7 +14,7 @@ from datetime import datetime
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
 from dataset import Dataset
-from mrganPlus import MRGANPLUS
+from mrganPlusPlus import MRGANPLUSPLUS
 
 logger = logging.getLogger(__name__)  # logger
 logger.setLevel(logging.INFO)
@@ -32,8 +32,8 @@ class Solver(object):
         self._init_logger()
 
         self.dataset = Dataset(self.flags.dataset, self.flags, log_path=self.log_out_dir)
-        self.model = MRGANPLUS(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
-                               log_path=self.log_out_dir)
+        self.model = MRGANPLUSPLUS(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
+                                   log_path=self.log_out_dir)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
@@ -92,9 +92,10 @@ class Solver(object):
             logger.info('gpu_index: {}'.format(self.flags.gpu_index))
             logger.info('is_gdl: {}'.format(self.flags.is_gdl))
             logger.info('is_perceputal: {}'.format(self.flags.is_perceptual))
-            logger.info('is_LSGAN: {}'.format(self.flags.is_LSGAN))
+            logger.info('is_ssim: {}'.format(self.flags.is_ssim))
             logger.info('gdl_weight: {}'.format(self.flags.gdl_weight))
             logger.info('perceptual_weight: {}'.format(self.flags.perceptual_weight))
+            logger.info('ssim_weight: {}'.format(self.flags.ssim_weight))
             logger.info('L1_lambda: {}'.format(self.flags.L1_lambda))
             logger.info('is_train: {}'.format(self.flags.is_train))
 

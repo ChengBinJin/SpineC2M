@@ -2,6 +2,7 @@
 */.idea/vcs.xml
 */__pycache__/
 */spine06/
+caseStudy/
 eval/cyclegan/
 eval/gt/
 eval/pix2pix/
@@ -34,5 +35,18 @@ eval/mrganPlus_w1=0_w2=10
 eval/mrganPlus_w1=1_w2=10
 eval/mrganPlus_w1=10_w2=10
 eval/mrganPlus_w1=100_w2=10
+eval/mrganPlus_w1=0_w2=100
+eval/mrganPlus_w1=0_w2=1000
+eval/mrganPlus_w1=1000_w2=0
+eval/mrganPlus_w1=1000_w2=1
+eval/mrganPlus_w1=1000_w2=10
+eval/mrganPlus_w1=1000_w2=100
+eval/mrganPlus_w1=1000_w2=1000
+eval/mrganPlus_w1=100_w2=100
+eval/mrganPlus_w1=100_w2=1000
+eval/mrganPlus_w1=10_w2=100
+eval/mrganPlus_w1=10_w2=1000
+eval/mrganPlus_w1=1_w2=100
+eval/mrganPlus_w1=1_w2=1000
 eval/src/data
 eval/src/best30_ssim_mrganPlus

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Tensorflow SpineC2M-mrgan+ Implementation
+# Tensorflow SpineC2M-mrgan Implementation
 # Licensed under The MIT License [see LICENSE for details]
 # Written by vanhuyz
 # ---------------------------------------------------------

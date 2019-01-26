@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 # noinspection PyPep8Naming
-class MRGANPLUS(object):
+class MRGANPLUSPLUS(object):
     def __init__(self, sess, flags, img_size, data_path, log_path=None):
         self.sess = sess
         self.flags = flags
@@ -39,9 +39,11 @@ class MRGANPLUS(object):
         # Percepual loss term
         self.perceptual_weight = self.flags.perceptual_weight
         self.is_perceptual_loss = self.flags.is_perceptual
+        # SSIM loss term
+        self.ssim_weight = self.flags.ssim_weight
+        self.is_ssim_loss = self.flags.is_ssim
         # voxel-wise loss term
         self.L1_lambda = self.flags.L1_lambda
-        self.is_lsgan = self.flags.is_LSGAN  # True: use lsgan (mean squared error), False: use cross entropy loss
 
         # [instance|batch] use instance norm or batch norm, default: instance
         self.norm = 'instane'
@@ -74,12 +76,10 @@ class MRGANPLUS(object):
 
         self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
-        self.Dy_dis = Discriminator(name='Dy', ndf=self.ndf, norm=self.norm, _ops=self._Dy_dis_train_ops,
-                                    is_lsgan=self.is_lsgan)
+        self.Dy_dis = Discriminator(name='Dy', ndf=self.ndf, norm=self.norm, _ops=self._Dy_dis_train_ops)
         self.F_gen = Generator(name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._F_gen_train_ops)
-        self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops,
-                                    is_lsgan=self.is_lsgan)
+        self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops)
         self.vggModel = VGG16(name='VGG16_Pretrained')
 
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
@@ -103,22 +103,24 @@ class MRGANPLUS(object):
         self.yx_fake_pairs = tf.concat([self.y_imgs, self.fake_x_imgs], axis=3)
 
         # X -> Y
-        self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs, is_lsgan=self.is_lsgan)
+        self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_gdl_loss = self.gradient_difference_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_perceptual_loss = self.perceptual_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
-        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + self.G_perceptual_loss
-        self.Dy_dis_loss = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph,
-                                                   is_lsgan=self.is_lsgan)
+        self.G_ssim_loss = self.ssim_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
+        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + \
+                      self.G_perceptual_loss + self.G_ssim_loss
+        self.Dy_dis_loss = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph)
 
         # Y -> X
-        self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs, is_lsgan=self.is_lsgan)
+        self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_gdl_loss = self.gradient_difference_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_perceputal_loss = self.perceptual_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
-        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + self.F_perceputal_loss
-        self.Dx_dis_loss = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph,
-                                                   is_lsgan=self.is_lsgan)
+        self.F_ssim_loss = self.ssim_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
+        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + \
+                      self.F_perceputal_loss + self.F_ssim_loss
+        self.Dx_dis_loss = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph)
 
         G_optim = self.optimizer(loss=self.G_loss, variables=self.G_gen.variables, name='Adam_G')
         Dy_optim = self.optimizer(loss=self.Dy_dis_loss, variables=self.Dy_dis.variables, name='Adam_Dy')
@@ -155,6 +157,18 @@ class MRGANPLUS(object):
         loss = self.lambda1 * forward_loss + self.lambda2 * backward_loss
         return loss
 
+    def ssim_loss_fn(self, preds, gts):
+        ssim_loss = 0.
+        if self.is_ssim_loss:
+            # inputs of the ssim should be non-negative
+            preds = (preds + 1.) / 2.
+            gts = (gts + 1.) / 2.
+            ssim_positive = tf.math.maximum(0., tf.image.ssim(preds, gts, max_val=1.0))
+            ssim_loss = -tf.log(ssim_positive)
+            ssim_loss = self.ssim_weight * tf.reduce_mean(ssim_loss)
+
+        return ssim_loss
+
     def voxel_loss(self, preds, gts):
         cond_loss = tf.reduce_mean(tf.abs(preds - gts))
         loss = self.L1_lambda * cond_loss
@@ -181,30 +195,23 @@ class MRGANPLUS(object):
         return perceptual_loss
 
 
-    def generator_loss(self, dis_obj, fake_img, is_lsgan=True):
-        if is_lsgan:
-            # use mean squared error
-            loss = 0.5 * tf.reduce_mean(tf.squared_difference(dis_obj(fake_img), self.real_label))
-        else:
-            d_logit_fake = dis_obj(fake_img)
-            loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
+    @staticmethod
+    def generator_loss(dis_obj, fake_img):
+        d_logit_fake = dis_obj(fake_img)
+        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
 
         return loss
 
-    def discriminator_loss(self, dis_obj, real_img, fake_img, is_lsgan=True):
-        if is_lsgan:
-            # use mean squared error
-            error_real = tf.reduce_mean(tf.squared_difference(dis_obj(real_img), self.real_label))
-            error_fake = tf.reduce_mean(tf.square(dis_obj(fake_img)))
-        else:
-            # use cross entropy
-            d_logit_real = dis_obj(real_img)
-            d_logit_fake = dis_obj(fake_img)
-            error_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=d_logit_real, labels=tf.ones_like(d_logit_real)))
-            error_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake)))
+    @staticmethod
+    def discriminator_loss(dis_obj, real_img, fake_img):
+        # use cross entropy
+        d_logit_real = dis_obj(real_img)
+        d_logit_fake = dis_obj(fake_img)
+        error_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            logits=d_logit_real, labels=tf.ones_like(d_logit_real)))
+        error_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+            logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake)))
 
         loss = 0.5 * (error_real + error_fake)
         return loss
@@ -216,12 +223,14 @@ class MRGANPLUS(object):
         tf.summary.scalar('loss/G_cond', self.G_cond_loss)
         tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
         tf.summary.scalar('loss/G_perceptual', self.G_perceptual_loss)
+        tf.summary.scalar('loss/G_ssim', self.G_ssim_loss)
         tf.summary.scalar('loss/Dy_dis', self.Dy_dis_loss)
         tf.summary.scalar('loss/F_loss', self.F_loss)
         tf.summary.scalar('loss/F_gen', self.F_gen_loss)
         tf.summary.scalar('loss/F_cond', self.F_cond_loss)
         tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
         tf.summary.scalar('loss/F_perceptual', self.F_perceputal_loss)
+        tf.summary.scalar('loss/F_ssim', self.F_ssim_loss)
         tf.summary.scalar('loss/Dx_dis', self.Dx_dis_loss)
         self.summary_op = tf.summary.merge_all()
 
@@ -230,19 +239,19 @@ class MRGANPLUS(object):
         xy_fake_pairs, yx_fake_pairs = self.sess.run([self.xy_fake_pairs, self.yx_fake_pairs])
         ops = [self.optims,
                self.G_loss, self.G_gen_loss, self.G_cond_loss,
-               self.G_gdl_loss, self.G_perceptual_loss, self.cycle_loss, self.Dy_dis_loss,
+               self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss,
                self.F_loss, self.F_gen_loss, self.F_cond_loss,
-               self.F_gdl_loss, self.F_perceputal_loss, self.Dx_dis_loss,
+               self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss,
                self.summary_op]
         feed_dict = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj.query(xy_fake_pairs),
                      self.yx_fake_pairs_tfph: self.fake_yx_pool_obj.query(yx_fake_pairs)}
 
-        _, G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, cycle_loss, Dy_loss, \
-        F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, Dx_loss, \
+        _, G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, Dy_loss, \
+        F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss, \
         summary = self.sess.run(ops, feed_dict=feed_dict)
 
-        return [G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, cycle_loss, Dy_loss,
-                F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, Dx_loss], summary
+        return [G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, Dy_loss,
+                F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss], summary
 
     def test_step(self):
         x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
@@ -260,16 +269,15 @@ class MRGANPLUS(object):
 
     def print_info(self, loss, iter_time):
         if np.mod(iter_time, self.flags.print_freq) == 0:
-            ord_output = collections.OrderedDict([('cur_iter', iter_time), ('tar_iters', self.flags.iters),
-                                                  ('batch_size', self.flags.batch_size),
+            ord_output = collections.OrderedDict([('tar_iters', self.flags.iters),
                                                   ('G_loss', loss[0]), ('G_gen_loss', loss[1]),
                                                   ('G_cond_loss', loss[2]), ('G_gdl_loss', loss[3]),
-                                                  ('G_perceptual_loss', loss[4]), ('G_cycle_loss', loss[5]),
-                                                  ('Dy_loss', loss[6]),
-                                                  ('F_loss', loss[7]), ('F_gen_loss', loss[8]),
-                                                  ('F_cond_loss', loss[9]), ('F_gdl_loss', loss[10]),
-                                                  ('F_perceptual_loss', loss[11]), ('F_cycle_loss', loss[5]),
-                                                  ('Dx_loss', loss[12]),
+                                                  ('G_perceptual_loss', loss[4]), ('G_ssim_loss', loss[5]),
+                                                  ('G_cycle_loss', loss[6]), ('Dy_loss', loss[7]),
+                                                  ('F_loss', loss[8]), ('F_gen_loss', loss[9]),
+                                                  ('F_cond_loss', loss[10]), ('F_gdl_loss', loss[11]),
+                                                  ('F_perceptual_loss', loss[12]), ('F_ssim_loss', loss[13]),
+                                                  ('F_cycle_loss', loss[6]), ('Dx_loss', loss[14]),
                                                   ('dataset', self.flags.dataset),
                                                   ('gpu_index', self.flags.gpu_index)])
 
@@ -382,13 +390,12 @@ class Generator(object):
 
 
 class Discriminator(object):
-    def __init__(self, name='', ndf=64, norm='instance', _ops=None, is_lsgan=False):
+    def __init__(self, name='', ndf=64, norm='instance', _ops=None):
         self.name = name
         self.ndf = ndf
         self.norm = norm
         self._ops = _ops
         self.reuse = False
-        self.is_lsgan = is_lsgan
 
     def __call__(self, x):
         with tf.variable_scope(self.name, reuse=self.reuse):
