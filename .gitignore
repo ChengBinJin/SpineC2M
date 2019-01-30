@@ -48,5 +48,12 @@ eval/mrganPlus_w1=10_w2=100
 eval/mrganPlus_w1=10_w2=1000
 eval/mrganPlus_w1=1_w2=100
 eval/mrganPlus_w1=1_w2=1000
+eval/mrganPlusPlus_w3=0.1
+eval/mrganPlusPlus_w3=0.5
+eval/mrganPlusPlus_w3=1
+eval/mrganPlusPlus_w3=10
+eval/mrganPlusPlus_w3=100
+eval/mrganPlusPlus_w3=1000
 eval/src/data
 eval/src/best30_ssim_mrganPlus
+eval/src/best30_ssim_mrganPlusPlus

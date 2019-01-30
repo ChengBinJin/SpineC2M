@@ -103,30 +103,32 @@ class MRGANPLUSPLUS(object):
         self.yx_fake_pairs = tf.concat([self.y_imgs, self.fake_x_imgs], axis=3)
 
         # X -> Y
-        self.G_gen_loss = self.generator_loss(self.Dy_dis, self.xy_fake_pairs)
+        # TODO: semi-supervised
+        self.G_gen_loss_sup = self.generator_loss(self.Dy_dis, self.xy_fake_pairs)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_gdl_loss = self.gradient_difference_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_perceptual_loss = self.perceptual_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_ssim_loss = self.ssim_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
-        self.G_loss = self.G_gen_loss + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + \
+        self.G_loss_sup = self.G_gen_loss_sup + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + \
                       self.G_perceptual_loss + self.G_ssim_loss
-        self.Dy_dis_loss = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph)
+        self.Dy_dis_loss_sup = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph)
 
         # Y -> X
-        self.F_gen_loss = self.generator_loss(self.Dx_dis, self.yx_fake_pairs)
+        self.F_gen_loss_sup = self.generator_loss(self.Dx_dis, self.yx_fake_pairs)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_gdl_loss = self.gradient_difference_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_perceputal_loss = self.perceptual_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_ssim_loss = self.ssim_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
-        self.F_loss = self.F_gen_loss + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + \
+        self.F_loss_sup = self.F_gen_loss_sup + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + \
                       self.F_perceputal_loss + self.F_ssim_loss
-        self.Dx_dis_loss = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph)
+        self.Dx_dis_loss_sup = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph)
 
-        G_optim = self.optimizer(loss=self.G_loss, variables=self.G_gen.variables, name='Adam_G')
-        Dy_optim = self.optimizer(loss=self.Dy_dis_loss, variables=self.Dy_dis.variables, name='Adam_Dy')
-        F_optim = self.optimizer(loss=self.F_loss, variables=self.F_gen.variables, name='Adam_F')
-        Dx_optim = self.optimizer(loss=self.Dx_dis_loss, variables=self.Dx_dis.variables, name='Adam_Dx')
-        self.optims = tf.group([G_optim, Dy_optim, F_optim, Dx_optim])
+        # Supervised learning
+        G_optim_sup = self.optimizer(loss=self.G_loss_sup, variables=self.G_gen.variables, name='Adam_G')
+        Dy_optim_sup = self.optimizer(loss=self.Dy_dis_loss_sup, variables=self.Dy_dis.variables, name='Adam_Dy')
+        F_optim_sup = self.optimizer(loss=self.F_loss_sup, variables=self.F_gen.variables, name='Adam_F')
+        Dx_optim_sup = self.optimizer(loss=self.Dx_dis_loss_sup, variables=self.Dx_dis.variables, name='Adam_Dx')
+        self.optims_sup = tf.group([G_optim_sup, Dy_optim_sup, F_optim_sup, Dx_optim_sup])
 
         # for sampling function
         self.fake_y_sample = self.G_gen(self.x_test_tfph)
@@ -158,7 +160,7 @@ class MRGANPLUSPLUS(object):
         return loss
 
     def ssim_loss_fn(self, preds, gts):
-        ssim_loss = 0.
+        ssim_loss = tf.constant(0., dtype=tf.float32)
         if self.is_ssim_loss:
             # inputs of the ssim should be non-negative
             preds = (preds + 1.) / 2.
@@ -175,7 +177,7 @@ class MRGANPLUSPLUS(object):
         return loss
 
     def gradient_difference_loss(self, preds, gts):
-        gdl_loss = 0.
+        gdl_loss = tf.constant(0., dtype=tf.float32)
         if self.is_gdl_loss:
             preds_dy, preds_dx = tf.image.image_gradients(preds)
             gts_dy, gts_dx = tf.image.image_gradients(gts)
@@ -186,7 +188,7 @@ class MRGANPLUSPLUS(object):
         return gdl_loss
 
     def perceptual_loss_fn(self, preds, gts):
-        perceptual_loss = 0.
+        perceptual_loss = tf.constant(0., dtype=tf.float32)
         if self.is_perceptual_loss:
             preds_feature = self.vggModel(preds)
             gts_feature = self.vggModel(gts)
@@ -218,40 +220,46 @@ class MRGANPLUSPLUS(object):
 
     def _tensorboard(self):
         tf.summary.scalar('loss/cycle', self.cycle_loss)
-        tf.summary.scalar('loss/G_loss', self.G_loss)
-        tf.summary.scalar('loss/G_gen', self.G_gen_loss)
+        tf.summary.scalar('loss/G_loss', self.G_loss_sup)
+        tf.summary.scalar('loss/G_gen', self.G_gen_loss_sup)
         tf.summary.scalar('loss/G_cond', self.G_cond_loss)
-        tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
-        tf.summary.scalar('loss/G_perceptual', self.G_perceptual_loss)
-        tf.summary.scalar('loss/G_ssim', self.G_ssim_loss)
-        tf.summary.scalar('loss/Dy_dis', self.Dy_dis_loss)
-        tf.summary.scalar('loss/F_loss', self.F_loss)
-        tf.summary.scalar('loss/F_gen', self.F_gen_loss)
+        tf.summary.scalar('loss/Dy_dis', self.Dy_dis_loss_sup)
+        tf.summary.scalar('loss/F_loss', self.F_loss_sup)
+        tf.summary.scalar('loss/F_gen', self.F_gen_loss_sup)
         tf.summary.scalar('loss/F_cond', self.F_cond_loss)
-        tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
-        tf.summary.scalar('loss/F_perceptual', self.F_perceputal_loss)
-        tf.summary.scalar('loss/F_ssim', self.F_ssim_loss)
-        tf.summary.scalar('loss/Dx_dis', self.Dx_dis_loss)
+        tf.summary.scalar('loss/Dx_dis', self.Dx_dis_loss_sup)
+
+        if self.is_gdl_loss:
+            tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
+            tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
+        if self.is_perceptual_loss:
+            tf.summary.scalar('loss/G_perceptual', self.G_perceptual_loss)
+            tf.summary.scalar('loss/F_perceptual', self.F_perceputal_loss)
+        if self.is_ssim_loss:
+            tf.summary.scalar('loss/G_ssim', self.G_ssim_loss)
+            tf.summary.scalar('loss/F_ssim', self.F_ssim_loss)
+
         self.summary_op = tf.summary.merge_all()
 
     def train_step(self):
         # self.xy_fake_pairs
         xy_fake_pairs, yx_fake_pairs = self.sess.run([self.xy_fake_pairs, self.yx_fake_pairs])
-        ops = [self.optims,
-               self.G_loss, self.G_gen_loss, self.G_cond_loss,
-               self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss,
-               self.F_loss, self.F_gen_loss, self.F_cond_loss,
-               self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss,
+        sup_ops = [self.optims_sup,
+               self.G_loss_sup, self.G_gen_loss_sup, self.G_cond_loss,
+               self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss_sup,
+               self.F_loss_sup, self.F_gen_loss_sup, self.F_cond_loss,
+               self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss_sup,
                self.summary_op]
         feed_dict = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj.query(xy_fake_pairs),
                      self.yx_fake_pairs_tfph: self.fake_yx_pool_obj.query(yx_fake_pairs)}
 
-        _, G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, Dy_loss, \
-        F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss, \
-        summary = self.sess.run(ops, feed_dict=feed_dict)
+        _, G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, \
+        Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss_sup, \
+        summary = self.sess.run(sup_ops, feed_dict=feed_dict)
 
-        return [G_loss, G_gen_loss, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, Dy_loss,
-                F_loss, F_gen_loss, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss], summary
+        return [G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss,
+                Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss,
+                Dx_loss_sup], summary
 
     def test_step(self):
         x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])

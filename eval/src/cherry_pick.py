@@ -134,7 +134,7 @@ def main(methods, measures, img_size):
 
 
 if __name__ == '__main__':
-    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'mrganPlus']
+    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'mrganPlus', 'mrganPlusPlus']
     target_measures = ['mae', 'rmse', 'psnr', 'ssim', 'pcc']
     img_size_ = (300, 200, 1)
 
