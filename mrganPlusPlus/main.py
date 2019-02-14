@@ -13,10 +13,10 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_bool('is_gdl', True, 'gradient difference loss (GDL) for the generator, default: True')
 tf.flags.DEFINE_bool('is_perceptual', True, 'perceptual loss for for the generator, default: True')
-tf.flags.DEFINE_bool('is_ssim', False, 'SSIM loss for the generator, default: False')
+tf.flags.DEFINE_bool('is_ssim', True, 'SSIM loss for the generator, default: True')
 tf.flags.DEFINE_float('gdl_weight', 100., 'weight (hyper-parameter) for gradient difference loss term, default: 100.')
 tf.flags.DEFINE_float('perceptual_weight', 1., 'weight (hyper-parameter) for perceputal loss term, default: 1.')
-tf.flags.DEFINE_float('ssim_weight', 1., 'weight (hyper-parameter) for ssim loss term, default: 1.')
+tf.flags.DEFINE_float('ssim_weight', 0.05, 'weight (hyper-parameter) for ssim loss term, default: 0.05')
 tf.flags.DEFINE_float('L1_lambda', 100., 'L1 lambda for conditional voxel-wise loss, default: 100.')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 

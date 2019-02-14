@@ -69,13 +69,22 @@ class MRGANPLUSPLUS(object):
         # tfph: TensorFlow PlaceHolder
         self.x_test_tfph = tf.placeholder(tf.float32, shape=[None, *self.img_size], name='x_test_tfph')
         self.y_test_tfph = tf.placeholder(tf.float32, shape=[None, *self.img_size], name='y_test_tfph')
+
+        # Supervised learning placeholders for Image Pool Tech.
         self.xy_fake_pairs_tfph = tf.placeholder(tf.float32, shape=[None, self.img_size[0], self.img_size[1], 2],
                                                  name='xy_fake_pairs_tfph')
         self.yx_fake_pairs_tfph = tf.placeholder(tf.float32, shape=[None, self.img_size[0], self.img_size[1], 2],
                                                  name='yx_fake_pairs_tfph')
 
+        # Unsupervised learning placeholders for Image Pool Tech.
+        self.xy_fake_unpairs_tfph = tf.placeholder(tf.float32, shape=[None, self.img_size[0], self.img_size[1], 1],
+                                                   name='xy_fake_unpairs_tfph')
+        self.yx_fake_unpairs_tfph = tf.placeholder(tf.float32, shape=[None, self.img_size[0], self.img_size[1], 1],
+                                                   name='yx_fake_unpairs_tfph')
+
         self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
+        # TODO: add discriminator mode: A, B, C, D
         self.Dy_dis = Discriminator(name='Dy', ndf=self.ndf, norm=self.norm, _ops=self._Dy_dis_train_ops)
         self.F_gen = Generator(name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._F_gen_train_ops)
@@ -103,7 +112,7 @@ class MRGANPLUSPLUS(object):
         self.yx_fake_pairs = tf.concat([self.y_imgs, self.fake_x_imgs], axis=3)
 
         # X -> Y
-        # TODO: semi-supervised
+        # Supervised learning
         self.G_gen_loss_sup = self.generator_loss(self.Dy_dis, self.xy_fake_pairs)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_gdl_loss = self.gradient_difference_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
@@ -113,7 +122,10 @@ class MRGANPLUSPLUS(object):
                       self.G_perceptual_loss + self.G_ssim_loss
         self.Dy_dis_loss_sup = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph)
 
+        # TODO: Unsupervised learning
+
         # Y -> X
+        # Supervised learning
         self.F_gen_loss_sup = self.generator_loss(self.Dx_dis, self.yx_fake_pairs)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_gdl_loss = self.gradient_difference_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
