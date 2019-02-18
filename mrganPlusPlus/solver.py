@@ -98,6 +98,7 @@ class Solver(object):
             logger.info('ssim_weight: {}'.format(self.flags.ssim_weight))
             logger.info('L1_lambda: {}'.format(self.flags.L1_lambda))
             logger.info('is_train: {}'.format(self.flags.is_train))
+            logger.info('dis_model: {}'.format(self.flags.dis_model))
 
             logger.info('batch_size: {}'.format(self.flags.batch_size))
             logger.info('dataset: {}'.format(self.flags.dataset))
@@ -124,16 +125,22 @@ class Solver(object):
 
         try:
             while self.iter_time < self.flags.iters:
-                # samppling images and save them
+                # Samppling images and save them
                 self.sample(self.iter_time)
 
-                # train_step
-                loss, summary = self.model.train_step()
+                # Train_step
+                # Supervised learning
+                loss, summary = self.model.train_step_sup()
                 self.model.print_info(loss, self.iter_time)
+
+                # Unsupervised learning
+                loss = self.model.train_step_unsup()
+                self.model.print_info(loss, self.iter_time, is_sup=False)
+
                 self.train_writer.add_summary(summary, self.iter_time)
                 self.train_writer.flush()
 
-                # save model
+                # Save model
                 self.save_model(self.iter_time)
                 self.iter_time += 1
 

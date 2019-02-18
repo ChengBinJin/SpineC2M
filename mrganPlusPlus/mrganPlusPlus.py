@@ -84,11 +84,18 @@ class MRGANPLUSPLUS(object):
 
         self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
-        # TODO: add discriminator mode: A, B, C, D
-        self.Dy_dis = Discriminator(name='Dy', ndf=self.ndf, norm=self.norm, _ops=self._Dy_dis_train_ops)
-        self.F_gen = Generator(name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
-                               _ops=self._F_gen_train_ops)
-        self.Dx_dis = Discriminator(name='Dx', ndf=self.ndf, norm=self.norm, _ops=self._Dx_dis_train_ops)
+        # TODO: add discriminator mode: A, B, C, D, E, F, G
+        # Implementing: G model
+        self.Dy_dis_sup = Discriminator(
+            name='Dy_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dy_dis_train_ops)
+        self.Dy_dis_unsup = Discriminator(
+            name='Dy_unsup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dy_dis_train_ops)
+        self.F_gen = Generator(
+            name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size, _ops=self._F_gen_train_ops)
+        self.Dx_dis_sup = Discriminator(
+            name='Dx_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dx_dis_train_ops)
+        self.Dx_dis_unsup = Discriminator(
+            name='Dx_unsup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dx_dis_train_ops)
         self.vggModel = VGG16(name='VGG16_Pretrained')
 
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
@@ -96,8 +103,10 @@ class MRGANPLUSPLUS(object):
         # self.x_imgs_ori and self.y_imgs_ori are the images before data augmentation
         self.x_imgs, self.y_imgs, self.x_imgs_ori, self.y_imgs_ori, self.img_name = data_reader.feed()
 
-        self.fake_xy_pool_obj = utils.ImagePool(pool_size=50)
-        self.fake_yx_pool_obj = utils.ImagePool(pool_size=50)
+        self.fake_xy_pool_obj_sup = utils.ImagePool(pool_size=50)
+        self.fake_yx_pool_obj_sup = utils.ImagePool(pool_size=50)
+        self.fake_xy_pool_obj_unsup = utils.ImagePool(pool_size=50)
+        self.fake_yx_pool_obj_unsup = utils.ImagePool(pool_size=50)
 
         # cycle consistency loss
         self.cycle_loss = self.cycle_consistency_loss(self.x_imgs, self.y_imgs)
@@ -113,34 +122,57 @@ class MRGANPLUSPLUS(object):
 
         # X -> Y
         # Supervised learning
-        self.G_gen_loss_sup = self.generator_loss(self.Dy_dis, self.xy_fake_pairs)
+        self.G_gen_loss_sup = self.generator_loss(self.Dy_dis_sup, self.xy_fake_pairs)
         self.G_cond_loss = self.voxel_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_gdl_loss = self.gradient_difference_loss(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_perceptual_loss = self.perceptual_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_ssim_loss = self.ssim_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_loss_sup = self.G_gen_loss_sup + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + \
                       self.G_perceptual_loss + self.G_ssim_loss
-        self.Dy_dis_loss_sup = self.discriminator_loss(self.Dy_dis, self.xy_real_pairs, self.xy_fake_pairs_tfph)
+        self.Dy_dis_loss_sup = self.discriminator_loss(self.Dy_dis_sup, self.xy_real_pairs, self.xy_fake_pairs_tfph)
 
-        # TODO: Unsupervised learning
+        # Unsupervised learning
+        self.G_gen_loss_unsup = self.generator_loss(self.Dy_dis_unsup, self.fake_y_imgs)
+        self.G_loss_unsup = self.G_gen_loss_unsup + self.cycle_loss
+        self.Dy_dis_loss_unsup = self.discriminator_loss(self.Dy_dis_unsup, self.y_imgs, self.xy_fake_unpairs_tfph)
 
         # Y -> X
         # Supervised learning
-        self.F_gen_loss_sup = self.generator_loss(self.Dx_dis, self.yx_fake_pairs)
+        self.F_gen_loss_sup = self.generator_loss(self.Dx_dis_sup, self.yx_fake_pairs)
         self.F_cond_loss = self.voxel_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_gdl_loss = self.gradient_difference_loss(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_perceputal_loss = self.perceptual_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_ssim_loss = self.ssim_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_loss_sup = self.F_gen_loss_sup + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + \
                       self.F_perceputal_loss + self.F_ssim_loss
-        self.Dx_dis_loss_sup = self.discriminator_loss(self.Dx_dis, self.yx_real_pairs, self.yx_fake_pairs_tfph)
+        self.Dx_dis_loss_sup = self.discriminator_loss(self.Dx_dis_sup, self.yx_real_pairs, self.yx_fake_pairs_tfph)
+
+        # Unsupervised Learning
+        self.F_gen_loss_unsup = self.generator_loss(self.Dx_dis_unsup, self.fake_x_imgs)
+        self.F_loss_unsup = self.F_gen_loss_unsup + self.cycle_loss
+        self.Dx_dis_loss_unsup = self.discriminator_loss(self.Dx_dis_unsup, self.x_imgs, self.yx_fake_unpairs_tfph)
 
         # Supervised learning
-        G_optim_sup = self.optimizer(loss=self.G_loss_sup, variables=self.G_gen.variables, name='Adam_G')
-        Dy_optim_sup = self.optimizer(loss=self.Dy_dis_loss_sup, variables=self.Dy_dis.variables, name='Adam_Dy')
-        F_optim_sup = self.optimizer(loss=self.F_loss_sup, variables=self.F_gen.variables, name='Adam_F')
-        Dx_optim_sup = self.optimizer(loss=self.Dx_dis_loss_sup, variables=self.Dx_dis.variables, name='Adam_Dx')
+        G_optim_sup = self.optimizer(
+            loss=self.G_loss_sup, variables=self.G_gen.variables, name='Adam_G_sup')
+        Dy_optim_sup = self.optimizer(
+            loss=self.Dy_dis_loss_sup, variables=self.Dy_dis_sup.variables, name='Adam_Dy_sup')
+        F_optim_sup = self.optimizer(
+            loss=self.F_loss_sup, variables=self.F_gen.variables, name='Adam_F_sup')
+        Dx_optim_sup = self.optimizer(
+            loss=self.Dx_dis_loss_sup, variables=self.Dx_dis_sup.variables, name='Adam_Dx_sup')
         self.optims_sup = tf.group([G_optim_sup, Dy_optim_sup, F_optim_sup, Dx_optim_sup])
+
+        # Unsupervised learning
+        G_optim_unsup = self.optimizer(
+            loss=self.G_loss_unsup, variables=self.G_gen.variables, name='Adam_G_unsup')
+        Dy_optim_unsup = self.optimizer(
+            loss=self.Dy_dis_loss_unsup, variables=self.Dy_dis_unsup.variables, name='Adam_Dy_unsup')
+        F_optim_unsup = self.optimizer(
+            loss=self.F_loss_unsup, variables=self.F_gen.variables, name='Adam_F_unsup')
+        Dx_optim_unsup = self.optimizer(
+            loss=self.Dx_dis_loss_unsup, variables=self.Dx_dis_unsup.variables, name='Adam_Dx_unsup')
+        self.optims_unsup = tf.group([G_optim_unsup, Dy_optim_unsup, F_optim_unsup, Dx_optim_unsup])
 
         # for sampling function
         self.fake_y_sample = self.G_gen(self.x_test_tfph)
@@ -253,8 +285,8 @@ class MRGANPLUSPLUS(object):
 
         self.summary_op = tf.summary.merge_all()
 
-    def train_step(self):
-        # self.xy_fake_pairs
+    def train_step_sup(self):
+        # Supervised learning
         xy_fake_pairs, yx_fake_pairs = self.sess.run([self.xy_fake_pairs, self.yx_fake_pairs])
         sup_ops = [self.optims_sup,
                self.G_loss_sup, self.G_gen_loss_sup, self.G_cond_loss,
@@ -262,16 +294,31 @@ class MRGANPLUSPLUS(object):
                self.F_loss_sup, self.F_gen_loss_sup, self.F_cond_loss,
                self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss_sup,
                self.summary_op]
-        feed_dict = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj.query(xy_fake_pairs),
-                     self.yx_fake_pairs_tfph: self.fake_yx_pool_obj.query(yx_fake_pairs)}
+        feed_dict_sup = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj_sup.query(xy_fake_pairs),
+                     self.yx_fake_pairs_tfph: self.fake_yx_pool_obj_sup.query(yx_fake_pairs)}
 
         _, G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, \
         Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss_sup, \
-        summary = self.sess.run(sup_ops, feed_dict=feed_dict)
+        summary = self.sess.run(sup_ops, feed_dict=feed_dict_sup)
 
         return [G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss,
                 Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss,
                 Dx_loss_sup], summary
+
+    def train_step_unsup(self):
+        # Unsupervised learning
+        fake_y_imgs, fake_x_imgs = self.sess.run([self.fake_y_imgs, self.fake_x_imgs])
+        unsup_ops = [self.optims_unsup,
+                     self.G_loss_unsup, self.G_gen_loss_unsup, self.cycle_loss, self.Dy_dis_loss_unsup,
+                     self.F_loss_unsup, self.F_gen_loss_unsup, self.Dx_dis_loss_unsup]
+        feed_dict_unsup = {self.xy_fake_unpairs_tfph: self.fake_xy_pool_obj_unsup.query(fake_y_imgs),
+                           self.yx_fake_unpairs_tfph: self.fake_yx_pool_obj_unsup.query(fake_x_imgs)}
+
+        _, G_loss_unsup, G_gen_loss_unsup, cycle_loss, Dy_loss_unsup, F_loss_unsup, F_gen_loss_unsup, Dy_loss_unsup = \
+            self.sess.run(unsup_ops, feed_dict=feed_dict_unsup)
+
+        return [G_loss_unsup, G_gen_loss_unsup, cycle_loss, Dy_loss_unsup,
+                F_loss_unsup, F_gen_loss_unsup, Dy_loss_unsup]
 
     def test_step(self):
         x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
@@ -287,20 +334,27 @@ class MRGANPLUSPLUS(object):
 
         return [x_val, fake_y, y_val, fake_x]
 
-    def print_info(self, loss, iter_time):
+    def print_info(self, loss, iter_time, is_sup=True):
         if np.mod(iter_time, self.flags.print_freq) == 0:
-            ord_output = collections.OrderedDict([('tar_iters', self.flags.iters),
-                                                  ('G_loss', loss[0]), ('G_gen_loss', loss[1]),
-                                                  ('G_cond_loss', loss[2]), ('G_gdl_loss', loss[3]),
-                                                  ('G_perceptual_loss', loss[4]), ('G_ssim_loss', loss[5]),
-                                                  ('G_cycle_loss', loss[6]), ('Dy_loss', loss[7]),
-                                                  ('F_loss', loss[8]), ('F_gen_loss', loss[9]),
-                                                  ('F_cond_loss', loss[10]), ('F_gdl_loss', loss[11]),
-                                                  ('F_perceptual_loss', loss[12]), ('F_ssim_loss', loss[13]),
-                                                  ('F_cycle_loss', loss[6]), ('Dx_loss', loss[14]),
-                                                  ('gpu_index', self.flags.gpu_index)])
+            if is_sup:
+                ord_output = collections.OrderedDict([('tar_iters', self.flags.iters),
+                                                      ('G_loss_sup', loss[0]), ('G_gen_loss_sup', loss[1]),
+                                                      ('G_cond_loss', loss[2]), ('G_gdl_loss', loss[3]),
+                                                      ('G_perceptual_loss', loss[4]), ('G_ssim_loss', loss[5]),
+                                                      ('G_cycle_loss_sup', loss[6]), ('Dy_loss_sup', loss[7]),
+                                                      ('F_loss_sup', loss[8]), ('F_gen_loss_sup', loss[9]),
+                                                      ('F_cond_loss', loss[10]), ('F_gdl_loss', loss[11]),
+                                                      ('F_perceptual_loss', loss[12]), ('F_ssim_loss', loss[13]),
+                                                      ('F_cycle_loss_sup', loss[6]), ('Dx_loss_sup', loss[14])])
+            else:
+                ord_output = collections.OrderedDict([('G_loss_unsup', loss[0]), ('G_gen_loss_unsup', loss[1]),
+                                                      ('G_cycle_loss_unsup', loss[2]), ('Dy_loss_unsup', loss[3]),
+                                                      ('F_loss_unsup', loss[4]), ('F_gen_loss_unsup', loss[5]),
+                                                      ('F_cycle_loss_unsup', loss[2]), ('Dx_loss_unsup', loss[6]),
+                                                      ('gpu_index', self.flags.gpu_index)])
 
             utils.print_metrics(iter_time, ord_output)
+
 
     @staticmethod
     def plots(imgs, iter_time, image_size, save_file):
@@ -409,14 +463,61 @@ class Generator(object):
 
 
 class Discriminator(object):
-    def __init__(self, name='', ndf=64, norm='instance', _ops=None):
+    def __init__(self, name='', ndf=64, norm='instance', model='a', _ops=None):
         self.name = name
         self.ndf = ndf
         self.norm = norm
         self._ops = _ops
         self.reuse = False
+        self.model = model
+        self.variables = None
 
     def __call__(self, x):
+        if self.model.lower() == 'a':
+            output = self.model_a(x)
+        elif self.model.lower() == 'b':
+            output = self.model_b(x)
+        elif self.model.lower() == 'c':
+            output = self.model_c(x)
+        elif self.model.lower() == 'd':
+            output = self.model_d(x)
+        elif self.model.lower() == 'e':
+            output = self.model_e(x)
+        elif self.model.lower() == 'f':
+            output = self.model_f(x)
+        elif self.model.lower() == 'g':
+            print("Hello model G!")
+            output = self.model_g(x)
+        else:
+            raise NotImplementedError
+
+        return output
+
+    def model_a(self, x):
+        print("Hello model A!")
+        return None
+
+    def model_b(self, x):
+        print("Hello model B!")
+        return None
+
+    def model_c(self, x):
+        print("Hello model C!")
+        return None
+
+    def model_d(self, x):
+        print("Hello model D!")
+        return None
+
+    def model_e(self, x):
+        print("Hello model E!")
+        return None
+
+    def model_f(self, x):
+        print("Hello model F!")
+        return None
+
+    def model_g(self, x):
         with tf.variable_scope(self.name, reuse=self.reuse):
             tf_utils.print_activations(x)
 
@@ -454,3 +555,4 @@ class Discriminator(object):
             self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
 
             return output
+
