@@ -99,6 +99,7 @@ class Solver(object):
             logger.info('L1_lambda: {}'.format(self.flags.L1_lambda))
             logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('dis_model: {}'.format(self.flags.dis_model))
+            logger.info('learning_mode: {}'.format(self.flags.learning_mode))
 
             logger.info('batch_size: {}'.format(self.flags.batch_size))
             logger.info('dataset: {}'.format(self.flags.dataset))
@@ -130,15 +131,16 @@ class Solver(object):
 
                 # Train_step
                 # Supervised learning
-                loss, summary = self.model.train_step_sup()
-                self.model.print_info(loss, self.iter_time)
+                if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'super'):
+                    loss, summary = self.model.train_step_sup()
+                    self.model.print_info(loss, self.iter_time)
+                    self.train_writer.add_summary(summary, self.iter_time)
+                    self.train_writer.flush()
 
                 # Unsupervised learning
-                loss = self.model.train_step_unsup()
-                self.model.print_info(loss, self.iter_time, is_sup=False)
-
-                self.train_writer.add_summary(summary, self.iter_time)
-                self.train_writer.flush()
+                if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'unsuper'):
+                    loss = self.model.train_step_unsup()
+                    self.model.print_info(loss, self.iter_time, is_sup=False)
 
                 # Save model
                 self.save_model(self.iter_time)

@@ -87,15 +87,19 @@ class MRGANPLUSPLUS(object):
         # TODO: add discriminator mode: A, B, C, D, E, F, G
         # Implementing: G model
         self.Dy_dis_sup = Discriminator(
-            name='Dy_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dy_dis_train_ops)
+            name='Dy_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, shared_reuse=False,
+            _ops=self._Dy_dis_train_ops)
         self.Dy_dis_unsup = Discriminator(
-            name='Dy_unsup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dy_dis_train_ops)
+            name='Dy_unsup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, shared_reuse=True,
+            _ops=self._Dy_dis_train_ops)
         self.F_gen = Generator(
             name='F', ngf=self.ngf, norm=self.norm, image_size=self.img_size, _ops=self._F_gen_train_ops)
         self.Dx_dis_sup = Discriminator(
-            name='Dx_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dx_dis_train_ops)
+            name='Dx_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, shared_reuse=False,
+            _ops=self._Dx_dis_train_ops)
         self.Dx_dis_unsup = Discriminator(
-            name='Dx_unsup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, _ops=self._Dx_dis_train_ops)
+            name='Dx_unsup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, shared_reuse=True,
+            _ops=self._Dx_dis_train_ops)
         self.vggModel = VGG16(name='VGG16_Pretrained')
 
         data_reader = Reader(self.data_path, name='data', image_size=self.img_size, batch_size=self.flags.batch_size,
@@ -136,6 +140,10 @@ class MRGANPLUSPLUS(object):
         self.G_loss_unsup = self.G_gen_loss_unsup + self.cycle_loss
         self.Dy_dis_loss_unsup = self.discriminator_loss(self.Dy_dis_unsup, self.y_imgs, self.xy_fake_unpairs_tfph)
 
+        # Integrated optimization
+        self.G_gen_loss_integrated = self.G_loss_sup + self.G_loss_unsup
+        self.Dy_dis_loss_integrated = self.Dy_dis_loss_sup + self.Dy_dis_loss_unsup
+
         # Y -> X
         # Supervised learning
         self.F_gen_loss_sup = self.generator_loss(self.Dx_dis_sup, self.yx_fake_pairs)
@@ -151,6 +159,10 @@ class MRGANPLUSPLUS(object):
         self.F_gen_loss_unsup = self.generator_loss(self.Dx_dis_unsup, self.fake_x_imgs)
         self.F_loss_unsup = self.F_gen_loss_unsup + self.cycle_loss
         self.Dx_dis_loss_unsup = self.discriminator_loss(self.Dx_dis_unsup, self.x_imgs, self.yx_fake_unpairs_tfph)
+
+        # Integrated optimization
+        self.F_gen_loss_integrated = self.F_loss_sup + self.F_loss_unsup
+        self.Dx_dis_loss_integrated = self.Dx_dis_loss_sup + self.Dx_dis_loss_unsup
 
         # Supervised learning
         G_optim_sup = self.optimizer(
@@ -174,9 +186,26 @@ class MRGANPLUSPLUS(object):
             loss=self.Dx_dis_loss_unsup, variables=self.Dx_dis_unsup.variables, name='Adam_Dx_unsup')
         self.optims_unsup = tf.group([G_optim_unsup, Dy_optim_unsup, F_optim_unsup, Dx_optim_unsup])
 
+        # Integrated optimization
+        G_optim_integrated = self.optimizer(
+            loss=self.G_gen_loss_integrated, variables=self.G_gen.variables, name='Adam_G_integrated')
+        Dy_optim_integrated = self.optimizer(
+            loss=self.Dy_dis_loss_integrated, variables=[self.Dy_dis_sup.variables, self.Dy_dis_unsup.variables],
+            name='Adam_Dy_integrated')
+        F_optim_integrated = self.optimizer(
+            loss=self.F_gen_loss_integrated, variables=self.F_gen.variables, name='Adam_F_integrated')
+        Dx_optim_integrated = self.optimizer(
+            loss=self.Dx_dis_loss_integrated, variables=[self.Dx_dis_sup.variables, self.Dx_dis_unsup.variables],
+            name='Adam_Dx_integrated')
+        self.optims_integrated = tf.group(
+            [G_optim_integrated, Dy_optim_integrated, F_optim_integrated, Dx_optim_integrated])
+
+
         # for sampling function
         self.fake_y_sample = self.G_gen(self.x_test_tfph)
         self.fake_x_sample = self.F_gen(self.y_test_tfph)
+
+        self.print_network_vars(is_print=True)
 
     def optimizer(self, loss, variables, name='Adam'):
         global_step = tf.Variable(0, trainable=False)
@@ -285,15 +314,63 @@ class MRGANPLUSPLUS(object):
 
         self.summary_op = tf.summary.merge_all()
 
+    def print_network_vars(self, is_print=False):
+        if is_print:
+            print('\nDy_dis_sup variables:')
+            for var in self.Dy_dis_sup.variables:
+                print(var.name)
+
+            print('\nDy_dis_unsup variables:')
+            for var in self.Dy_dis_unsup.variables:
+                print(var.name)
+
+            print('\nDx_dis_sup variables:')
+            for var in self.Dx_dis_sup.variables:
+                print(var.name)
+
+            print('\nDx_dis_unsup variables:')
+            for var in self.Dx_dis_unsup.variables:
+                print(var.name)
+
+    def train_step_integrated(self):
+        # Supervised learning
+        # TODO: need to revise this part
+        xy_fake_pairs, yx_fake_pairs, fake_y_imgs, fake_x_imgs = self.sess.run(
+            [self.xy_fake_pairs, self.yx_fake_pairs, self.fake_y_imgs, self.fake_x_imgs])
+        sup_ops = [self.optims_integrated,
+                   self.G_loss_sup, self.G_gen_loss_sup, self.G_cond_loss,
+                   self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss_sup,
+                   self.F_loss_sup, self.F_gen_loss_sup, self.F_cond_loss,
+                   self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss_sup,
+                   self.summary_op,
+                   self.G_loss_unsup, self.G_gen_loss_unsup, self.cycle_loss, self.Dy_dis_loss_unsup,
+                   self.F_loss_unsup, self.F_gen_loss_unsup, self.Dx_dis_loss_unsup]
+
+        feed_dict_sup = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj_sup.query(xy_fake_pairs),
+                         self.yx_fake_pairs_tfph: self.fake_yx_pool_obj_sup.query(yx_fake_pairs),
+                         self.xy_fake_unpairs_tfph: self.fake_xy_pool_obj_unsup.query(fake_y_imgs),
+                         self.yx_fake_unpairs_tfph: self.fake_yx_pool_obj_unsup.query(fake_x_imgs)}
+
+        # TODO: need to revise this part
+        _, G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, \
+        Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss_sup, \
+        summary = self.sess.run(sup_ops, feed_dict=feed_dict_sup)
+
+        # TODO: need to revise this part
+        return [G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss,
+                Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss,
+                Dx_loss_sup], summary
+
+
     def train_step_sup(self):
         # Supervised learning
         xy_fake_pairs, yx_fake_pairs = self.sess.run([self.xy_fake_pairs, self.yx_fake_pairs])
         sup_ops = [self.optims_sup,
-               self.G_loss_sup, self.G_gen_loss_sup, self.G_cond_loss,
-               self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss_sup,
-               self.F_loss_sup, self.F_gen_loss_sup, self.F_cond_loss,
-               self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss_sup,
-               self.summary_op]
+                   self.G_loss_sup, self.G_gen_loss_sup, self.G_cond_loss,
+                   self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss_sup,
+                   self.F_loss_sup, self.F_gen_loss_sup, self.F_cond_loss,
+                   self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss_sup,
+                   self.summary_op]
         feed_dict_sup = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj_sup.query(xy_fake_pairs),
                      self.yx_fake_pairs_tfph: self.fake_yx_pool_obj_sup.query(yx_fake_pairs)}
 
@@ -345,9 +422,11 @@ class MRGANPLUSPLUS(object):
                                                       ('F_loss_sup', loss[8]), ('F_gen_loss_sup', loss[9]),
                                                       ('F_cond_loss', loss[10]), ('F_gdl_loss', loss[11]),
                                                       ('F_perceptual_loss', loss[12]), ('F_ssim_loss', loss[13]),
-                                                      ('F_cycle_loss_sup', loss[6]), ('Dx_loss_sup', loss[14])])
+                                                      ('F_cycle_loss_sup', loss[6]), ('Dx_loss_sup', loss[14]),
+                                                      ('gpu_index', self.flags.gpu_index)])
             else:
-                ord_output = collections.OrderedDict([('G_loss_unsup', loss[0]), ('G_gen_loss_unsup', loss[1]),
+                ord_output = collections.OrderedDict([('tar_iters', self.flags.iters),
+                                                      ('G_loss_unsup', loss[0]), ('G_gen_loss_unsup', loss[1]),
                                                       ('G_cycle_loss_unsup', loss[2]), ('Dy_loss_unsup', loss[3]),
                                                       ('F_loss_unsup', loss[4]), ('F_gen_loss_unsup', loss[5]),
                                                       ('F_cycle_loss_unsup', loss[2]), ('Dx_loss_unsup', loss[6]),
@@ -463,12 +542,14 @@ class Generator(object):
 
 
 class Discriminator(object):
-    def __init__(self, name='', ndf=64, norm='instance', model='a', _ops=None):
+    def __init__(self, name='', ndf=64, norm='instance', model='a', shared_reuse=False, _ops=None):
         self.name = name
+        self.shared_name = self.name[0:3] + 'shared'
         self.ndf = ndf
         self.norm = norm
         self._ops = _ops
         self.reuse = False
+        self.shared_reuse = shared_reuse
         self.model = model
         self.variables = None
 
@@ -494,28 +575,262 @@ class Discriminator(object):
         return output
 
     def model_a(self, x):
-        print("Hello model A!")
-        return None
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            tf_utils.print_activations(x)
+
+            # (N, H, W, C) -> (N, H/2, W/2, 64)
+            conv1 = tf_utils.conv2d(x, self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv1_conv')
+            conv1 = tf_utils.lrelu(conv1, name='conv1_lrelu', is_print=True)
+
+        with tf.variable_scope(self.shared_name, reuse=self.shared_reuse):
+            # (N, H/2, W/2, 64) -> (N, H/4, W/4, 128)
+            conv2 = tf_utils.conv2d(conv1, 2 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv2_conv')
+            conv2 = tf_utils.norm(conv2, _type='instance', _ops=self._ops, name='conv2_norm')
+            conv2 = tf_utils.lrelu(conv2, name='conv2_lrelu', is_print=True)
+
+            # (N, H/4, W/4, 128) -> (N, H/8, W/8, 256)
+            conv3 = tf_utils.conv2d(conv2, 4 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv3_conv')
+            conv3 = tf_utils.norm(conv3, _type='instance', _ops=self._ops, name='conv3_norm')
+            conv3 = tf_utils.lrelu(conv3, name='conv3_lrelu', is_print=True)
+
+            # (N, H/8, W/8, 256) -> (N, H/16, W/16, 512)
+            conv4 = tf_utils.conv2d(conv3, 8 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv4_conv')
+            conv4 = tf_utils.norm(conv4, _type='instance', _ops=self._ops, name='conv4_norm')
+            conv4 = tf_utils.lrelu(conv4, name='conv4_lrelu', is_print=True)
+
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            # (N, H/16, W/16, 512) -> (N, H/16, W/16, 1)
+            conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
+                                    name='conv5_conv', is_print=True)
+
+            output = tf.identity(conv5, name='output_without_sigmoid')
+
+        # set reuse=True for next call
+        self.reuse = True
+        self.shared_reuse = True
+        self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+        self.variables += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.shared_name)
+
+        return output
 
     def model_b(self, x):
-        print("Hello model B!")
-        return None
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            tf_utils.print_activations(x)
+
+            # (N, H, W, C) -> (N, H/2, W/2, 64)
+            conv1 = tf_utils.conv2d(x, self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv1_conv')
+            conv1 = tf_utils.lrelu(conv1, name='conv1_lrelu', is_print=True)
+
+            # (N, H/2, W/2, 64) -> (N, H/4, W/4, 128)
+            conv2 = tf_utils.conv2d(conv1, 2 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv2_conv')
+            conv2 = tf_utils.norm(conv2, _type='instance', _ops=self._ops, name='conv2_norm')
+            conv2 = tf_utils.lrelu(conv2, name='conv2_lrelu', is_print=True)
+
+        with tf.variable_scope(self.shared_name, reuse=self.shared_reuse):
+            # (N, H/4, W/4, 128) -> (N, H/8, W/8, 256)
+            conv3 = tf_utils.conv2d(conv2, 4 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv3_conv')
+            conv3 = tf_utils.norm(conv3, _type='instance', _ops=self._ops, name='conv3_norm')
+            conv3 = tf_utils.lrelu(conv3, name='conv3_lrelu', is_print=True)
+
+            # (N, H/8, W/8, 256) -> (N, H/16, W/16, 512)
+            conv4 = tf_utils.conv2d(conv3, 8 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv4_conv')
+            conv4 = tf_utils.norm(conv4, _type='instance', _ops=self._ops, name='conv4_norm')
+            conv4 = tf_utils.lrelu(conv4, name='conv4_lrelu', is_print=True)
+
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            # (N, H/16, W/16, 512) -> (N, H/16, W/16, 1)
+            conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
+                                    name='conv5_conv', is_print=True)
+
+            output = tf.identity(conv5, name='output_without_sigmoid')
+
+        # set reuse=True for next call
+        self.reuse = True
+        self.shared_reuse = True
+        self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+        self.variables += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.shared_name)
+
+        return output
 
     def model_c(self, x):
-        print("Hello model C!")
-        return None
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            tf_utils.print_activations(x)
+
+            # (N, H, W, C) -> (N, H/2, W/2, 64)
+            conv1 = tf_utils.conv2d(x, self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv1_conv')
+            conv1 = tf_utils.lrelu(conv1, name='conv1_lrelu', is_print=True)
+
+        with tf.variable_scope(self.shared_name, reuse=self.shared_reuse):
+            # (N, H/2, W/2, 64) -> (N, H/4, W/4, 128)
+            conv2 = tf_utils.conv2d(conv1, 2 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv2_conv')
+            conv2 = tf_utils.norm(conv2, _type='instance', _ops=self._ops, name='conv2_norm')
+            conv2 = tf_utils.lrelu(conv2, name='conv2_lrelu', is_print=True)
+
+            # (N, H/4, W/4, 128) -> (N, H/8, W/8, 256)
+            conv3 = tf_utils.conv2d(conv2, 4 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv3_conv')
+            conv3 = tf_utils.norm(conv3, _type='instance', _ops=self._ops, name='conv3_norm')
+            conv3 = tf_utils.lrelu(conv3, name='conv3_lrelu', is_print=True)
+
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            # (N, H/8, W/8, 256) -> (N, H/16, W/16, 512)
+            conv4 = tf_utils.conv2d(conv3, 8 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv4_conv')
+            conv4 = tf_utils.norm(conv4, _type='instance', _ops=self._ops, name='conv4_norm')
+            conv4 = tf_utils.lrelu(conv4, name='conv4_lrelu', is_print=True)
+
+            # (N, H/16, W/16, 512) -> (N, H/16, W/16, 1)
+            conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
+                                    name='conv5_conv', is_print=True)
+
+            output = tf.identity(conv5, name='output_without_sigmoid')
+
+        # set reuse=True for next call
+        self.reuse = True
+        self.shared_reuse = True
+        self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+        self.variables += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.shared_name)
+
+        return output
 
     def model_d(self, x):
-        print("Hello model D!")
-        return None
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            tf_utils.print_activations(x)
+
+            # (N, H, W, C) -> (N, H/2, W/2, 64)
+            conv1 = tf_utils.conv2d(x, self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv1_conv')
+            conv1 = tf_utils.lrelu(conv1, name='conv1_lrelu', is_print=True)
+
+            # (N, H/2, W/2, 64) -> (N, H/4, W/4, 128)
+            conv2 = tf_utils.conv2d(conv1, 2 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv2_conv')
+            conv2 = tf_utils.norm(conv2, _type='instance', _ops=self._ops, name='conv2_norm')
+            conv2 = tf_utils.lrelu(conv2, name='conv2_lrelu', is_print=True)
+
+        with tf.variable_scope(self.shared_name, reuse=self.shared_reuse):
+            # (N, H/4, W/4, 128) -> (N, H/8, W/8, 256)
+            conv3 = tf_utils.conv2d(conv2, 4 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv3_conv')
+            conv3 = tf_utils.norm(conv3, _type='instance', _ops=self._ops, name='conv3_norm')
+            conv3 = tf_utils.lrelu(conv3, name='conv3_lrelu', is_print=True)
+
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            # (N, H/8, W/8, 256) -> (N, H/16, W/16, 512)
+            conv4 = tf_utils.conv2d(conv3, 8 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv4_conv')
+            conv4 = tf_utils.norm(conv4, _type='instance', _ops=self._ops, name='conv4_norm')
+            conv4 = tf_utils.lrelu(conv4, name='conv4_lrelu', is_print=True)
+
+            # (N, H/16, W/16, 512) -> (N, H/16, W/16, 1)
+            conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
+                                    name='conv5_conv', is_print=True)
+
+            output = tf.identity(conv5, name='output_without_sigmoid')
+
+        # set reuse=True for next call
+        self.reuse = True
+        self.shared_reuse = True
+        self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+        self.variables += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.shared_name)
+
+        return output
 
     def model_e(self, x):
-        print("Hello model E!")
-        return None
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            tf_utils.print_activations(x)
+
+            # (N, H, W, C) -> (N, H/2, W/2, 64)
+            conv1 = tf_utils.conv2d(x, self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv1_conv')
+            conv1 = tf_utils.lrelu(conv1, name='conv1_lrelu', is_print=True)
+
+            # (N, H/2, W/2, 64) -> (N, H/4, W/4, 128)
+            conv2 = tf_utils.conv2d(conv1, 2 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv2_conv')
+            conv2 = tf_utils.norm(conv2, _type='instance', _ops=self._ops, name='conv2_norm')
+            conv2 = tf_utils.lrelu(conv2, name='conv2_lrelu', is_print=True)
+
+            # (N, H/4, W/4, 128) -> (N, H/8, W/8, 256)
+            conv3 = tf_utils.conv2d(conv2, 4 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv3_conv')
+            conv3 = tf_utils.norm(conv3, _type='instance', _ops=self._ops, name='conv3_norm')
+            conv3 = tf_utils.lrelu(conv3, name='conv3_lrelu', is_print=True)
+
+        with tf.variable_scope(self.shared_name, reuse=self.shared_reuse):
+            # (N, H/8, W/8, 256) -> (N, H/16, W/16, 512)
+            conv4 = tf_utils.conv2d(conv3, 8 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv4_conv')
+            conv4 = tf_utils.norm(conv4, _type='instance', _ops=self._ops, name='conv4_norm')
+            conv4 = tf_utils.lrelu(conv4, name='conv4_lrelu', is_print=True)
+
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            # (N, H/16, W/16, 512) -> (N, H/16, W/16, 1)
+            conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
+                                    name='conv5_conv', is_print=True)
+
+            output = tf.identity(conv5, name='output_without_sigmoid')
+
+        # set reuse=True for next call
+        self.reuse = True
+        self.shared_reuse = True
+        self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+        self.variables += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.shared_name)
+
+        return output
 
     def model_f(self, x):
-        print("Hello model F!")
-        return None
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            tf_utils.print_activations(x)
+
+            # (N, H, W, C) -> (N, H/2, W/2, 64)
+            conv1 = tf_utils.conv2d(x, self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv1_conv')
+            conv1 = tf_utils.lrelu(conv1, name='conv1_lrelu', is_print=True)
+
+        with tf.variable_scope(self.shared_name, reuse=self.shared_reuse):
+            # (N, H/2, W/2, 64) -> (N, H/4, W/4, 128)
+            conv2 = tf_utils.conv2d(conv1, 2 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv2_conv')
+            conv2 = tf_utils.norm(conv2, _type='instance', _ops=self._ops, name='conv2_norm')
+            conv2 = tf_utils.lrelu(conv2, name='conv2_lrelu', is_print=True)
+
+        with tf.variable_scope(self.name, reuse=self.reuse):
+            # (N, H/4, W/4, 128) -> (N, H/8, W/8, 256)
+            conv3 = tf_utils.conv2d(conv2, 4 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv3_conv')
+            conv3 = tf_utils.norm(conv3, _type='instance', _ops=self._ops, name='conv3_norm')
+            conv3 = tf_utils.lrelu(conv3, name='conv3_lrelu', is_print=True)
+
+            # (N, H/8, W/8, 256) -> (N, H/16, W/16, 512)
+            conv4 = tf_utils.conv2d(conv3, 8 * self.ndf, k_h=4, k_w=4, d_h=2, d_w=2, padding='SAME',
+                                    name='conv4_conv')
+            conv4 = tf_utils.norm(conv4, _type='instance', _ops=self._ops, name='conv4_norm')
+            conv4 = tf_utils.lrelu(conv4, name='conv4_lrelu', is_print=True)
+
+            # (N, H/16, W/16, 512) -> (N, H/16, W/16, 1)
+            conv5 = tf_utils.conv2d(conv4, 1, k_h=4, k_w=4, d_h=1, d_w=1, padding='SAME',
+                                    name='conv5_conv', is_print=True)
+
+            output = tf.identity(conv5, name='output_without_sigmoid')
+
+        # set reuse=True for next call
+        self.reuse = True
+        self.shared_reuse = True
+        self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+        self.variables += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.shared_name)
+
+        return output
 
     def model_g(self, x):
         with tf.variable_scope(self.name, reuse=self.reuse):
