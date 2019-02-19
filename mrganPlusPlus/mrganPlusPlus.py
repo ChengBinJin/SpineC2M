@@ -334,32 +334,22 @@ class MRGANPLUSPLUS(object):
 
     def train_step_integrated(self):
         # Supervised learning
-        # TODO: need to revise this part
         xy_fake_pairs, yx_fake_pairs, fake_y_imgs, fake_x_imgs = self.sess.run(
             [self.xy_fake_pairs, self.yx_fake_pairs, self.fake_y_imgs, self.fake_x_imgs])
+
         sup_ops = [self.optims_integrated,
-                   self.G_loss_sup, self.G_gen_loss_sup, self.G_cond_loss,
-                   self.G_gdl_loss, self.G_perceptual_loss, self.G_ssim_loss, self.cycle_loss, self.Dy_dis_loss_sup,
-                   self.F_loss_sup, self.F_gen_loss_sup, self.F_cond_loss,
-                   self.F_gdl_loss, self.F_perceputal_loss, self.F_ssim_loss, self.Dx_dis_loss_sup,
-                   self.summary_op,
-                   self.G_loss_unsup, self.G_gen_loss_unsup, self.cycle_loss, self.Dy_dis_loss_unsup,
-                   self.F_loss_unsup, self.F_gen_loss_unsup, self.Dx_dis_loss_unsup]
+                   self.G_gen_loss_integrated, self.Dy_dis_loss_integrated,
+                   self.F_gen_loss_integrated, self.Dx_dis_loss_integrated]
 
         feed_dict_sup = {self.xy_fake_pairs_tfph: self.fake_xy_pool_obj_sup.query(xy_fake_pairs),
                          self.yx_fake_pairs_tfph: self.fake_yx_pool_obj_sup.query(yx_fake_pairs),
                          self.xy_fake_unpairs_tfph: self.fake_xy_pool_obj_unsup.query(fake_y_imgs),
                          self.yx_fake_unpairs_tfph: self.fake_yx_pool_obj_unsup.query(fake_x_imgs)}
 
-        # TODO: need to revise this part
-        _, G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss, \
-        Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss, Dx_loss_sup, \
-        summary = self.sess.run(sup_ops, feed_dict=feed_dict_sup)
+        _, G_gen_loss_integrated, Dy_dis_loss_integrated, F_gen_loss_integrated, Dx_dis_loss_integrated = \
+            self.sess.run(sup_ops, feed_dict=feed_dict_sup)
 
-        # TODO: need to revise this part
-        return [G_loss_sup, G_gen_loss_sup, G_cond_loss, G_gdl_loss, G_perceptual_loss, G_ssim_loss, cycle_loss,
-                Dy_loss_sup, F_loss_sup, F_gen_loss_sup, F_cond_loss, F_gdl_loss, F_perceptual_loss, F_ssim_loss,
-                Dx_loss_sup], summary
+        return [G_gen_loss_integrated, Dy_dis_loss_integrated, F_gen_loss_integrated, Dx_dis_loss_integrated]
 
 
     def train_step_sup(self):
@@ -431,6 +421,15 @@ class MRGANPLUSPLUS(object):
                                                       ('F_loss_unsup', loss[4]), ('F_gen_loss_unsup', loss[5]),
                                                       ('F_cycle_loss_unsup', loss[2]), ('Dx_loss_unsup', loss[6]),
                                                       ('gpu_index', self.flags.gpu_index)])
+
+            utils.print_metrics(iter_time, ord_output)
+
+    def print_info_integrated(self, loss, iter_time):
+        if np.mod(iter_time, self.flags.print_freq) == 0:
+            ord_output = collections.OrderedDict([('tar_iters', self.flags.iters),
+                                                  ('G_gen_loss', loss[0]), ('Dy_dis_loss', loss[1]),
+                                                  ('F_gen_loss', loss[2]), ('Dx_dis_loss', loss[3]),
+                                                  ('gpu_index', self.flags.gpu_index)])
 
             utils.print_metrics(iter_time, ord_output)
 

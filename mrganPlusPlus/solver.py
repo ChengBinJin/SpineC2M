@@ -100,6 +100,7 @@ class Solver(object):
             logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('dis_model: {}'.format(self.flags.dis_model))
             logger.info('learning_mode: {}'.format(self.flags.learning_mode))
+            logger.info('is_alterative_optim: {}'.format(self.flags.is_alterative_optim))
 
             logger.info('batch_size: {}'.format(self.flags.batch_size))
             logger.info('dataset: {}'.format(self.flags.dataset))
@@ -129,18 +130,24 @@ class Solver(object):
                 # Samppling images and save them
                 self.sample(self.iter_time)
 
-                # Train_step
-                # Supervised learning
-                if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'super'):
-                    loss, summary = self.model.train_step_sup()
-                    self.model.print_info(loss, self.iter_time)
-                    self.train_writer.add_summary(summary, self.iter_time)
-                    self.train_writer.flush()
+                # Alternative optimization
+                if self.flags.is_alterative_optim:
+                    # Train_step
+                    # Supervised learning
+                    if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'super'):
+                        loss, summary = self.model.train_step_sup()
+                        self.model.print_info(loss, self.iter_time)
+                        self.train_writer.add_summary(summary, self.iter_time)
+                        self.train_writer.flush()
 
-                # Unsupervised learning
-                if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'unsuper'):
-                    loss = self.model.train_step_unsup()
-                    self.model.print_info(loss, self.iter_time, is_sup=False)
+                    # Unsupervised learning
+                    if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'unsuper'):
+                        loss = self.model.train_step_unsup()
+                        self.model.print_info(loss, self.iter_time, is_sup=False)
+                # Integrated optimization
+                else:
+                    loss = self.model.train_step_integrated()
+                    self.model.print_info_integrated(loss, self.iter_time)
 
                 # Save model
                 self.save_model(self.iter_time)
