@@ -397,11 +397,11 @@ class DC2Anet(object):
         feed_dict_unsup = {self.xy_fake_unpairs_tfph: self.fake_xy_pool_obj_unsup.query(fake_y_imgs),
                            self.yx_fake_unpairs_tfph: self.fake_yx_pool_obj_unsup.query(fake_x_imgs)}
 
-        _, G_loss_unsup, G_gen_loss_unsup, cycle_loss, Dy_loss_unsup, F_loss_unsup, F_gen_loss_unsup, Dy_loss_unsup = \
+        _, G_loss_unsup, G_gen_loss_unsup, cycle_loss, Dy_loss_unsup, F_loss_unsup, F_gen_loss_unsup, Dx_loss_unsup = \
             self.sess.run(unsup_ops, feed_dict=feed_dict_unsup)
 
         return [G_loss_unsup, G_gen_loss_unsup, cycle_loss, Dy_loss_unsup,
-                F_loss_unsup, F_gen_loss_unsup, Dy_loss_unsup]
+                F_loss_unsup, F_gen_loss_unsup, Dx_loss_unsup]
 
     def test_step(self):
         x_val, y_val, img_name = self.sess.run([self.x_imgs, self.y_imgs, self.img_name])
