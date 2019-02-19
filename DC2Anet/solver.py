@@ -14,7 +14,7 @@ from datetime import datetime
 # noinspection PyPep8Naming
 import tensorflow_utils as tf_utils
 from dataset import Dataset
-from mrganPlusPlus import MRGANPLUSPLUS
+from dc2anet import DC2Anet
 
 logger = logging.getLogger(__name__)  # logger
 logger.setLevel(logging.INFO)
@@ -32,8 +32,8 @@ class Solver(object):
         self._init_logger()
 
         self.dataset = Dataset(self.flags.dataset, self.flags, log_path=self.log_out_dir)
-        self.model = MRGANPLUSPLUS(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
-                                   log_path=self.log_out_dir)
+        self.model = DC2Anet(self.sess, self.flags, self.dataset.image_size, self.dataset(self.flags.is_train),
+                             log_path=self.log_out_dir)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
@@ -62,7 +62,7 @@ class Solver(object):
         elif not self.flags.is_train:  # test stage
             self.model_out_dir = "{}/model/{}".format(self.flags.dataset, self.flags.load_model)
             self.test_out_dir = "{}/test/{}".format(self.flags.dataset, self.flags.load_model)
-            self.eval_out_dir = "../eval/mrganPlusPlus"
+            self.eval_out_dir = "../eval/DC2Anet"
             self.gt_out_dir = "../eval/gt"
             self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, self.flags.load_model)
 

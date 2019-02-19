@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 # noinspection PyPep8Naming
-class MRGANPLUSPLUS(object):
+class DC2Anet(object):
     def __init__(self, sess, flags, img_size, data_path, log_path=None):
         self.sess = sess
         self.flags = flags
