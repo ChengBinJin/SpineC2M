@@ -33,21 +33,25 @@ class MRGANPLUSPLUS(object):
         self.img_size = img_size
         self.data_path = data_path
         self.log_path = log_path
-        # Gradient difference loss (GDL) term
-        self.gdl_weight = self.flags.gdl_weight
-        self.is_gdl_loss = self.flags.is_gdl  # True: use gradient difference loss
-        # Percepual loss term
-        self.perceptual_weight = self.flags.perceptual_weight
-        self.is_perceptual_loss = self.flags.is_perceptual
-        # SSIM loss term
-        self.ssim_weight = self.flags.ssim_weight
-        self.is_ssim_loss = self.flags.is_ssim
+
+        # cycle-consistent loss term
+        self.is_cycle_consistent = self.flags.is_cycle_consistent
+        self.lambda1, self.lambda2 = self.flags.cycle_consistent_weight, self.flags.cycle_consistent_weight
         # voxel-wise loss term
+        self.is_voxel = self.flags.is_voxel
         self.L1_lambda = self.flags.L1_lambda
+        # Gradient difference loss (GDL) term
+        self.is_gdl = self.flags.is_gdl  # True: use gradient difference loss
+        self.gdl_weight = self.flags.gdl_weight
+        # Percepual loss term
+        self.is_perceptual = self.flags.is_perceptual
+        self.perceptual_weight = self.flags.perceptual_weight
+        # SSIM loss term
+        self.is_ssim = self.flags.is_ssim
+        self.ssim_weight = self.flags.ssim_weight
 
         # [instance|batch] use instance norm or batch norm, default: instance
         self.norm = 'instane'
-        self.lambda1, self.lambda2 = 10.0, 10.0
         self.ngf, self.ndf = 64, 64
         self.real_label = 0.9
         self.start_decay_step = int(self.flags.iters / 2)
@@ -84,7 +88,6 @@ class MRGANPLUSPLUS(object):
 
         self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
-        # TODO: add discriminator mode: A, B, C, D, E, F, G
         # Implementing: G model
         self.Dy_dis_sup = Discriminator(
             name='Dy_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, shared_reuse=False,
@@ -227,31 +230,24 @@ class MRGANPLUSPLUS(object):
         return learn_step
 
     def cycle_consistency_loss(self, x_imgs, y_imgs):
-        forward_loss = tf.reduce_mean(tf.abs(self.F_gen(self.G_gen(x_imgs)) - x_imgs))
-        backward_loss = tf.reduce_mean(tf.abs(self.G_gen(self.F_gen(y_imgs)) - y_imgs))
-        loss = self.lambda1 * forward_loss + self.lambda2 * backward_loss
+        loss = tf.constant(0., dtype=tf.float32)
+        if self.is_cycle_consistent:
+            forward_loss = tf.reduce_mean(tf.abs(self.F_gen(self.G_gen(x_imgs)) - x_imgs))
+            backward_loss = tf.reduce_mean(tf.abs(self.G_gen(self.F_gen(y_imgs)) - y_imgs))
+            loss = self.lambda1 * forward_loss + self.lambda2 * backward_loss
         return loss
 
-    def ssim_loss_fn(self, preds, gts):
-        ssim_loss = tf.constant(0., dtype=tf.float32)
-        if self.is_ssim_loss:
-            # inputs of the ssim should be non-negative
-            preds = (preds + 1.) / 2.
-            gts = (gts + 1.) / 2.
-            ssim_positive = tf.math.maximum(0., tf.image.ssim(preds, gts, max_val=1.0))
-            ssim_loss = -tf.log(ssim_positive)
-            ssim_loss = self.ssim_weight * tf.reduce_mean(ssim_loss)
-
-        return ssim_loss
-
     def voxel_loss(self, preds, gts):
-        cond_loss = tf.reduce_mean(tf.abs(preds - gts))
-        loss = self.L1_lambda * cond_loss
+        loss = tf.constant(0., dtype=tf.float32)
+        if self.is_voxel:
+            cond_loss = tf.reduce_mean(tf.abs(preds - gts))
+            loss = self.L1_lambda * cond_loss
+
         return loss
 
     def gradient_difference_loss(self, preds, gts):
         gdl_loss = tf.constant(0., dtype=tf.float32)
-        if self.is_gdl_loss:
+        if self.is_gdl:
             preds_dy, preds_dx = tf.image.image_gradients(preds)
             gts_dy, gts_dx = tf.image.image_gradients(gts)
 
@@ -262,12 +258,30 @@ class MRGANPLUSPLUS(object):
 
     def perceptual_loss_fn(self, preds, gts):
         perceptual_loss = tf.constant(0., dtype=tf.float32)
-        if self.is_perceptual_loss:
-            preds_feature = self.vggModel(preds)
-            gts_feature = self.vggModel(gts)
-            perceptual_loss = self.perceptual_weight * tf.reduce_mean(tf.abs(preds_feature - gts_feature))
+        if self.is_perceptual:
+            preds_features = self.vggModel(preds, mode=self.flags.perceptual_mode)
+            gts_features = self.vggModel(gts, mode=self.flags.perceptual_mode)
+
+            # There are several feature layers
+            for preds_feature, gts_feature in zip(preds_features, gts_features):
+                # print('perceputal mode: {}'.format(self.flags.perceptual_mode))
+                perceptual_loss += tf.reduce_mean(tf.abs(preds_feature - gts_feature))
+
+            perceptual_loss = self.perceptual_weight * perceptual_loss / len(preds_features)
 
         return perceptual_loss
+
+    def ssim_loss_fn(self, preds, gts):
+        ssim_loss = tf.constant(0., dtype=tf.float32)
+        if self.is_ssim:
+            # inputs of the ssim should be non-negative
+            preds = (preds + 1.) / 2.
+            gts = (gts + 1.) / 2.
+            ssim_positive = tf.math.maximum(0., tf.image.ssim(preds, gts, max_val=1.0))
+            ssim_loss = -tf.log(ssim_positive)
+            ssim_loss = self.ssim_weight * tf.reduce_mean(ssim_loss)
+
+        return ssim_loss
 
 
     @staticmethod
@@ -292,23 +306,25 @@ class MRGANPLUSPLUS(object):
         return loss
 
     def _tensorboard(self):
-        tf.summary.scalar('loss/cycle', self.cycle_loss)
         tf.summary.scalar('loss/G_loss', self.G_loss_sup)
         tf.summary.scalar('loss/G_gen', self.G_gen_loss_sup)
-        tf.summary.scalar('loss/G_cond', self.G_cond_loss)
         tf.summary.scalar('loss/Dy_dis', self.Dy_dis_loss_sup)
         tf.summary.scalar('loss/F_loss', self.F_loss_sup)
         tf.summary.scalar('loss/F_gen', self.F_gen_loss_sup)
-        tf.summary.scalar('loss/F_cond', self.F_cond_loss)
         tf.summary.scalar('loss/Dx_dis', self.Dx_dis_loss_sup)
 
-        if self.is_gdl_loss:
+        if self.is_cycle_consistent:
+            tf.summary.scalar('loss/cycle', self.cycle_loss)
+        if self.is_voxel:
+            tf.summary.scalar('loss/G_cond', self.G_cond_loss)
+            tf.summary.scalar('loss/F_cond', self.F_cond_loss)
+        if self.is_gdl:
             tf.summary.scalar('loss/G_gdl', self.G_gdl_loss)
             tf.summary.scalar('loss/F_gdl', self.F_gdl_loss)
-        if self.is_perceptual_loss:
+        if self.is_perceptual:
             tf.summary.scalar('loss/G_perceptual', self.G_perceptual_loss)
             tf.summary.scalar('loss/F_perceptual', self.F_perceputal_loss)
-        if self.is_ssim_loss:
+        if self.is_ssim:
             tf.summary.scalar('loss/G_ssim', self.G_ssim_loss)
             tf.summary.scalar('loss/F_ssim', self.F_ssim_loss)
 

@@ -13,7 +13,7 @@ class VGG16(object):
         with open(weight_file_path, 'rb') as f:
             self.pretrained_weights = cpickle.load(f, encoding='latin1')
 
-    def __call__(self, x):
+    def __call__(self, x, mode=1):
         with tf.variable_scope(self.name, reuse=self.reuse):
             x = tf.concat([x, x, x], axis=-1, name='concat')
             tf_utils.print_activations(x)
@@ -52,8 +52,20 @@ class VGG16(object):
             # set reuse=True for next call
             self.reuse = True
 
-            return  relu5_3
+            if mode == 1:
+                outputs = [relu1_2]
+            elif mode == 2:
+                outputs = [relu1_2, relu2_2]
+            elif mode == 3:
+                outputs = [relu1_2, relu2_2, relu3_3]
+            elif mode == 4:
+                outputs = [relu1_2, relu2_2, relu3_3, relu4_3]
+            elif mode == 5:
+                outputs = [relu1_2, relu2_2, relu3_3, relu4_3, relu5_3]
+            else:
+                raise NotImplementedError
 
+            return outputs
 
 
     def conv_layer(self, bottom, name, trainable=False):
