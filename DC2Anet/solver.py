@@ -102,6 +102,7 @@ class Solver(object):
             logger.info('is_ssim: {}'.format(self.flags.is_ssim))
             logger.info('ssim_weight: {}'.format(self.flags.ssim_weight))
 
+            logger.info('is_lsgan: {}'.format(self.flags.is_lsgan))
             logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('dis_model: {}'.format(self.flags.dis_model))
             logger.info('learning_mode: {}'.format(self.flags.learning_mode))

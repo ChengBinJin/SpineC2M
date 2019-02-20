@@ -53,6 +53,7 @@ class DC2Anet(object):
         # [instance|batch] use instance norm or batch norm, default: instance
         self.norm = 'instane'
         self.ngf, self.ndf = 64, 64
+        self.is_lsgan = self.flags.is_lsgan
         self.real_label = 0.9
         self.start_decay_step = int(self.flags.iters / 2)
         self.decay_steps = self.flags.iters - self.start_decay_step
@@ -88,7 +89,6 @@ class DC2Anet(object):
 
         self.G_gen = Generator(name='G', ngf=self.ngf, norm=self.norm, image_size=self.img_size,
                                _ops=self._G_gen_train_ops)
-        # Implementing: G model
         self.Dy_dis_sup = Discriminator(
             name='Dy_sup', ndf=self.ndf, norm=self.norm, model=self.flags.dis_model, shared_reuse=False,
             _ops=self._Dy_dis_train_ops)
@@ -203,7 +203,6 @@ class DC2Anet(object):
         self.optims_integrated = tf.group(
             [G_optim_integrated, Dy_optim_integrated, F_optim_integrated, Dx_optim_integrated])
 
-
         # for sampling function
         self.fake_y_sample = self.G_gen(self.x_test_tfph)
         self.fake_x_sample = self.F_gen(self.y_test_tfph)
@@ -284,23 +283,29 @@ class DC2Anet(object):
         return ssim_loss
 
 
-    @staticmethod
-    def generator_loss(dis_obj, fake_img):
-        d_logit_fake = dis_obj(fake_img)
-        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
+    def generator_loss(self, dis_obj, fake_img):
+        if self.is_lsgan:  # Use LSGAN loss
+            # use mean squared error
+            loss = 0.5 * tf.reduce_mean(tf.squared_difference(dis_obj(fake_img), self.real_label))
+        else:  # Use cross entropy (GAN) loss
+            d_logit_fake = dis_obj(fake_img)
+            loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
 
         return loss
 
-    @staticmethod
-    def discriminator_loss(dis_obj, real_img, fake_img):
-        # use cross entropy
-        d_logit_real = dis_obj(real_img)
-        d_logit_fake = dis_obj(fake_img)
-        error_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=d_logit_real, labels=tf.ones_like(d_logit_real)))
-        error_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake)))
+    def discriminator_loss(self, dis_obj, real_img, fake_img):
+        if self.is_lsgan:  # Use LSGAN loss
+            # use mean squared error
+            error_real = tf.reduce_mean(tf.squared_difference(dis_obj(real_img), self.real_label))
+            error_fake = tf.reduce_mean(tf.square(dis_obj(fake_img)))
+        else:  # Use cross entropy (GAN) loss
+            d_logit_real = dis_obj(real_img)
+            d_logit_fake = dis_obj(fake_img)
+            error_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=d_logit_real, labels=tf.ones_like(d_logit_real)))
+            error_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake)))
 
         loss = 0.5 * (error_real + error_fake)
         return loss
@@ -543,7 +548,7 @@ class Generator(object):
             conv5 = tf_utils.norm(conv5, _type='instance', _ops=self._ops, name='conv5_norm')
             conv5 = tf_utils.relu(conv5, name='conv5_relu', is_print=True)
 
-            # (N, H, W, 64) -> (N, H, W, 3)
+            # (N, H, W, 64) -> (N, H, W, 1)
             conv6 = tf_utils.padding2d(conv5, p_h=3, p_w=3, pad_type='REFLECT', name='output_padding')
             conv6 = tf_utils.conv2d(conv6, self.image_size[2], k_h=7, k_w=7, d_h=1, d_w=1,
                                     padding='VALID', name='output_conv')
@@ -582,7 +587,6 @@ class Discriminator(object):
         elif self.model.lower() == 'f':
             output = self.model_f(x)
         elif self.model.lower() == 'g':
-            print("Hello model G!")
             output = self.model_g(x)
         else:
             raise NotImplementedError

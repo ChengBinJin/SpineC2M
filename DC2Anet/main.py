@@ -25,6 +25,7 @@ tf.flags.DEFINE_float('ssim_weight', 0.05, 'weight (hyper-parameter) for ssim lo
 tf.flags.DEFINE_string('dis_model', 'a', 'discriminator model, select from [a|b|c|d|e|f|g], default: a')
 tf.flags.DEFINE_string('learning_mode', 'semi', 'learning mode, select from [super, unsuper, semi], default, semi')
 tf.flags.DEFINE_bool('is_alterative_optim', True, 'optimizing by alterative or integrated optimziation. default: True')
+tf.flags.DEFINE_bool('is_lsgan', True, 'use LSGAN loss, default: True')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
