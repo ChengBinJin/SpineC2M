@@ -23,9 +23,9 @@ tf.flags.DEFINE_integer('perceptual_mode', 5, 'feature layers [1|2|3|4|5], defau
 tf.flags.DEFINE_bool('is_ssim', True, 'SSIM loss for the generator, default: True')
 tf.flags.DEFINE_float('ssim_weight', 0.05, 'weight (hyper-parameter) for ssim loss term, default: 0.05')
 tf.flags.DEFINE_string('dis_model', 'a', 'discriminator model, select from [a|b|c|d|e|f|g], default: a')
-tf.flags.DEFINE_string('learning_mode', 'semi', 'learning mode, select from [super, unsuper, semi], default, semi')
+tf.flags.DEFINE_string('learning_mode', 'super', 'learning mode, select from [super, unsuper, semi], default, semi')
 tf.flags.DEFINE_bool('is_alterative_optim', True, 'optimizing by alterative or integrated optimziation. default: True')
-tf.flags.DEFINE_bool('is_lsgan', True, 'use LSGAN loss, default: True')
+tf.flags.DEFINE_bool('is_lsgan', False, 'use LSGAN loss, default: False')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
