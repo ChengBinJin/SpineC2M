@@ -136,12 +136,14 @@ class DC2Anet(object):
         self.G_ssim_loss = self.ssim_loss_fn(preds=self.fake_y_imgs, gts=self.y_imgs)
         self.G_loss_sup = self.G_gen_loss_sup + self.G_cond_loss + self.cycle_loss + self.G_gdl_loss + \
                       self.G_perceptual_loss + self.G_ssim_loss
-        self.Dy_dis_loss_sup = self.discriminator_loss(self.Dy_dis_sup, self.xy_real_pairs, self.xy_fake_pairs_tfph)
+        self.Dy_dis_loss_sup = self.discriminator_loss(
+            self.Dy_dis_sup, self.xy_real_pairs, self.xy_fake_pairs_tfph, is_lsgan=self.is_lsgan)
 
         # Unsupervised learning
         self.G_gen_loss_unsup = self.generator_loss(self.Dy_dis_unsup, self.fake_y_imgs)
         self.G_loss_unsup = self.G_gen_loss_unsup + self.cycle_loss
-        self.Dy_dis_loss_unsup = self.discriminator_loss(self.Dy_dis_unsup, self.y_imgs, self.xy_fake_unpairs_tfph)
+        self.Dy_dis_loss_unsup = self.discriminator_loss(
+            self.Dy_dis_unsup, self.y_imgs, self.xy_fake_unpairs_tfph, is_lsgan=True)
 
         # Integrated optimization
         self.G_gen_loss_integrated = self.G_loss_sup + self.G_loss_unsup
@@ -156,12 +158,14 @@ class DC2Anet(object):
         self.F_ssim_loss = self.ssim_loss_fn(preds=self.fake_x_imgs, gts=self.x_imgs)
         self.F_loss_sup = self.F_gen_loss_sup + self.F_cond_loss + self.cycle_loss + self.F_gdl_loss + \
                       self.F_perceputal_loss + self.F_ssim_loss
-        self.Dx_dis_loss_sup = self.discriminator_loss(self.Dx_dis_sup, self.yx_real_pairs, self.yx_fake_pairs_tfph)
+        self.Dx_dis_loss_sup = self.discriminator_loss(
+            self.Dx_dis_sup, self.yx_real_pairs, self.yx_fake_pairs_tfph, is_lsgan=self.is_lsgan)
 
         # Unsupervised Learning
         self.F_gen_loss_unsup = self.generator_loss(self.Dx_dis_unsup, self.fake_x_imgs)
         self.F_loss_unsup = self.F_gen_loss_unsup + self.cycle_loss
-        self.Dx_dis_loss_unsup = self.discriminator_loss(self.Dx_dis_unsup, self.x_imgs, self.yx_fake_unpairs_tfph)
+        self.Dx_dis_loss_unsup = self.discriminator_loss(
+            self.Dx_dis_unsup, self.x_imgs, self.yx_fake_unpairs_tfph, is_lsgan=True)
 
         # Integrated optimization
         self.F_gen_loss_integrated = self.F_loss_sup + self.F_loss_unsup
@@ -210,23 +214,24 @@ class DC2Anet(object):
         self.print_network_vars(is_print=True)
 
     def optimizer(self, loss, variables, name='Adam'):
-        global_step = tf.Variable(0, trainable=False)
-        starter_learning_rate = self.flags.learning_rate
-        end_learning_rate = 0.
-        start_decay_step = self.start_decay_step
-        decay_steps = self.decay_steps
+        with tf.variable_scope(name):
+            global_step = tf.Variable(0, trainable=False)
+            starter_learning_rate = self.flags.learning_rate
+            end_learning_rate = 0.
+            start_decay_step = self.start_decay_step
+            decay_steps = self.decay_steps
 
-        learning_rate = (tf.where(tf.greater_equal(global_step, start_decay_step),
-                                  tf.train.polynomial_decay(starter_learning_rate,
-                                                            global_step - start_decay_step,
-                                                            decay_steps, end_learning_rate, power=1.0),
-                                  starter_learning_rate))
-        tf.summary.scalar('learning_rate/{}'.format(name), learning_rate)
+            learning_rate = (tf.where(tf.greater_equal(global_step, start_decay_step),
+                                      tf.train.polynomial_decay(starter_learning_rate,
+                                                                global_step - start_decay_step,
+                                                                decay_steps, end_learning_rate, power=1.0),
+                                      starter_learning_rate))
+            tf.summary.scalar('{}/learning_rate'.format(name), learning_rate)
 
-        learn_step = tf.train.AdamOptimizer(learning_rate, beta1=self.flags.beta1, name=name).\
-            minimize(loss, global_step=global_step, var_list=variables)
+            learn_step = tf.train.AdamOptimizer(learning_rate, beta1=self.flags.beta1).\
+                minimize(loss, global_step=global_step, var_list=variables)
 
-        return learn_step
+            return learn_step
 
     def cycle_consistency_loss(self, x_imgs, y_imgs):
         loss = tf.constant(0., dtype=tf.float32)
@@ -294,8 +299,8 @@ class DC2Anet(object):
 
         return loss
 
-    def discriminator_loss(self, dis_obj, real_img, fake_img):
-        if self.is_lsgan:  # Use LSGAN loss
+    def discriminator_loss(self, dis_obj, real_img, fake_img, is_lsgan=False):
+        if is_lsgan:  # Use LSGAN loss
             # use mean squared error
             error_real = tf.reduce_mean(tf.squared_difference(dis_obj(real_img), self.real_label))
             error_fake = tf.reduce_mean(tf.square(dis_obj(fake_img)))

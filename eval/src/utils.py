@@ -7,6 +7,8 @@
 import os
 import xlsxwriter
 import numpy as np
+import matplotlib as mpl
+mpl.use('TkAgg')  # or whatever other backend that you want to solve Segmentation fault (core dumped)
 import matplotlib.pyplot as plt
 from skimage.measure import compare_ssim
 from scipy.stats import pearsonr
