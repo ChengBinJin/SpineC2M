@@ -363,7 +363,7 @@ class DC2Anet(object):
         xy_fake_pairs, yx_fake_pairs, fake_y_imgs, fake_x_imgs = self.sess.run(
             [self.xy_fake_pairs, self.yx_fake_pairs, self.fake_y_imgs, self.fake_x_imgs])
 
-        sup_ops = [self.optims_integrated,
+        inte_ops = [self.optims_integrated,
                    self.G_gen_loss_integrated, self.Dy_dis_loss_integrated,
                    self.F_gen_loss_integrated, self.Dx_dis_loss_integrated]
 
@@ -373,7 +373,7 @@ class DC2Anet(object):
                          self.yx_fake_unpairs_tfph: self.fake_yx_pool_obj_unsup.query(fake_x_imgs)}
 
         _, G_gen_loss_integrated, Dy_dis_loss_integrated, F_gen_loss_integrated, Dx_dis_loss_integrated = \
-            self.sess.run(sup_ops, feed_dict=feed_dict_sup)
+            self.sess.run(inte_ops, feed_dict=feed_dict_sup)
 
         return [G_gen_loss_integrated, Dy_dis_loss_integrated, F_gen_loss_integrated, Dx_dis_loss_integrated]
 

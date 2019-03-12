@@ -106,7 +106,7 @@ class Solver(object):
             logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('dis_model: {}'.format(self.flags.dis_model))
             logger.info('learning_mode: {}'.format(self.flags.learning_mode))
-            logger.info('is_alterative_optim: {}'.format(self.flags.is_alterative_optim))
+            logger.info('is_alternative_optim: {}'.format(self.flags.is_alternative_optim))
 
             logger.info('batch_size: {}'.format(self.flags.batch_size))
             logger.info('dataset: {}'.format(self.flags.dataset))
@@ -137,7 +137,7 @@ class Solver(object):
                 self.sample(self.iter_time)
 
                 # Alternative optimization
-                if self.flags.is_alterative_optim:
+                if self.flags.is_alternative_optim:
                     # Train_step
                     # Supervised learning
                     if np.logical_or(self.flags.learning_mode == 'semi', self.flags.learning_mode == 'super'):

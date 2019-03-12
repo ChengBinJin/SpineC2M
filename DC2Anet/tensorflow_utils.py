@@ -133,8 +133,9 @@ def batch_norm(x, name, _ops, is_train=True):
             _ops.append(moving_averages.assign_moving_average(moving_variance, variance, 0.9))
         else:
             mean = tf.get_variable('moving_mean', params_shape, tf.float32,
-                                   initializer=tf.constant_initializer(0.0, tf.float32), trainable=False)
-            variance = tf.get_variable('moving_variance', params_shape, tf.float32, trainable=False)
+                initializer=tf.constant_initializer(0.0, tf.float32), trainable=False)
+            variance = tf.get_variable('moving_variance', params_shape, tf.float32, 
+                initializer=tf.constant_initializer(1.0, tf.float32), trainable=False)
 
         # epsilon used to be 1e-5. Maybe 0.001 solves NaN problem in deeper net.
         y = tf.nn.batch_normalization(x, mean, variance, beta, gamma, 1e-5)
