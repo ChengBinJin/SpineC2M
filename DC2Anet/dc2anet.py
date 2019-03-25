@@ -143,7 +143,7 @@ class DC2Anet(object):
         self.G_gen_loss_unsup = self.generator_loss(self.Dy_dis_unsup, self.fake_y_imgs)
         self.G_loss_unsup = self.G_gen_loss_unsup + self.cycle_loss
         self.Dy_dis_loss_unsup = self.discriminator_loss(
-            self.Dy_dis_unsup, self.y_imgs, self.xy_fake_unpairs_tfph, is_lsgan=True)
+            self.Dy_dis_unsup, self.y_imgs, self.xy_fake_unpairs_tfph, is_lsgan=False)
 
         # Integrated optimization
         self.G_gen_loss_integrated = self.G_loss_sup + self.G_loss_unsup
@@ -165,7 +165,7 @@ class DC2Anet(object):
         self.F_gen_loss_unsup = self.generator_loss(self.Dx_dis_unsup, self.fake_x_imgs)
         self.F_loss_unsup = self.F_gen_loss_unsup + self.cycle_loss
         self.Dx_dis_loss_unsup = self.discriminator_loss(
-            self.Dx_dis_unsup, self.x_imgs, self.yx_fake_unpairs_tfph, is_lsgan=True)
+            self.Dx_dis_unsup, self.x_imgs, self.yx_fake_unpairs_tfph, is_lsgan=False)
 
         # Integrated optimization
         self.F_gen_loss_integrated = self.F_loss_sup + self.F_loss_unsup
