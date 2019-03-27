@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
+import cv2
 import xlsxwriter
 import numpy as np
 import matplotlib as mpl
@@ -180,3 +181,30 @@ def difference_map(pred, gt, save_fold, img_name, measure, min_value=0, max_valu
 
     plt.savefig(os.path.join(save_fold, img_name), bbox_inches='tight')
     plt.close()
+
+
+def central_crop(img, crop_size=(100, 80), start_h=110, start_w=60, factor=1.2, color=(0, 0, 255), thickness=1, base=1):
+    # Crop image
+    crop_img = img[start_h:start_h + crop_size[0], start_w:start_w + crop_size[1], :].copy()
+
+    # Draw box on original image
+    cv2.rectangle(img,
+                  (start_w, start_h),
+                  (start_w + crop_size[1], start_h + crop_size[0]),
+                  color,
+                  thickness)
+
+    # Draw box on the croped image
+    cv2.rectangle(crop_img,
+                  (0 + base, 0 + base),
+                  (crop_img.shape[1] - base, crop_img.shape[0] - base),
+                  color,
+                  thickness)
+
+    # Past cropped image on the original one
+    # img[:crop_size[0], -crop_size[1]:, :] = crop_img
+    crop_img = cv2.resize(crop_img, (int(factor * crop_size[1]), int(factor * crop_size[0])),
+                          interpolation=cv2.INTER_CUBIC)
+
+    # Return cropped image
+    return img, crop_img
