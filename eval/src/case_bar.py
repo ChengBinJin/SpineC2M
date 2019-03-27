@@ -129,8 +129,8 @@ def main(methods, display_names, measure, num_cases_require):
 
 
 if __name__ == '__main__':
-    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'mrganPlus']
-    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN', 'MR-GAN+']
+    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'DC2Anet']
+    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'DC2Anet']
     target_measusres = ['MAE','RMSE', 'PSNR', 'SSIM', 'PCC']
     num_cases_require_ = 20
 

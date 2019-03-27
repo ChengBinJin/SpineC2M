@@ -82,7 +82,7 @@ def main(gt, methods, display_names):
 
 if __name__ == '__main__':
     gt_ = 'gt'
-    methods_ = ['pix2pix', 'cyclegan', 'discogan', 'mrgan']
-    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN']
+    methods_ = ['pix2pix', 'cyclegan', 'discogan', 'DC2Anet']
+    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'DC2Anet']
 
     main(gt_, methods_, display_names_)
