@@ -99,13 +99,13 @@ def horizontal_bar_plot(methods, mean_arrs, var_arrs, num_cases_require, measure
         ax.bar(index + idx * bar_width, mean_arrs[idx], bar_width, alpha=opacity, color=colors[idx],
                 yerr=var_arrs[idx], error_kw=error_config, label=methods[idx])
 
-    ax.set_ylabel('{}{}'.format(measure, intro), fontsize=16)
-    ax.set_xlabel('Subject', fontsize=16)
+    ax.set_ylabel('{}{}'.format(measure, intro), fontsize=20)
+    ax.set_xlabel('Subject', fontsize=20)
     ax.set_xticks(index + bar_width * len(methods) / 2 - bar_width / 2)
-    ax.set_xticklabels([str(case_id).zfill(2) for case_id in range(1, num_cases_require+1)], fontsize=14)
-    ax.legend(fontsize=18)
+    ax.set_xticklabels([str(case_id).zfill(2) for case_id in range(1, num_cases_require+1)], fontsize=18)
+    ax.legend(fontsize=20)
     for tick in ax.yaxis.get_major_ticks():
-        tick.label.set_fontsize(14)
+        tick.label.set_fontsize(18)
 
     for axis, setter in [(ax.yaxis, ax.set_ylim)]:
         # vmin, vmax = axis.get_data_interval()
@@ -129,8 +129,8 @@ def main(methods, display_names, measure, num_cases_require):
 
 
 if __name__ == '__main__':
-    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'DC2Anet']
-    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'DC2Anet']
+    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'DC2Anet']
+    display_names_ = ['Multi-Channel GAN', 'Deep MR-to-CT', 'DiscoGAN', 'MR-GAN', 'DC2Anet']
     target_measusres = ['MAE','RMSE', 'PSNR', 'SSIM', 'PCC']
     num_cases_require_ = 20
 

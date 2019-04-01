@@ -115,19 +115,12 @@ def draw_box_plot(data_list, method_names):
         for x_val, y_val, color in zip(x_vals, y_vals, colors):
             ax1.scatter(x_val, y_val, s=5, c=color, alpha=0.5)
 
-        # ax = plt.axes()
-        # ax.yaxis.grid()  # horizontal lines
-        # plt.xticks(range(1, len(method_names)+1), method_names)
-        # plt.setp(box['medians'], color='black')
-        # plt.title(filenames[idx] + expressions[idx])
-        # plt.savefig(filenames[idx] + '.jpg', dpi=300)
-        # plt.close()
-
-        # ax = plt.axes()
         ax1.yaxis.grid()  # horizontal lines
-        plt.xticks(range(1, len(method_names)+1), method_names)
+        ax1.set_xticklabels([method_name for method_name in method_names], fontsize=14)
+        for tick in ax1.yaxis.get_major_ticks():
+            tick.label.set_fontsize(14)
         plt.setp(box['medians'], color='black')
-        plt.title(filenames[idx] + expressions[idx])
+        plt.title(filenames[idx] + expressions[idx], fontsize=14)
         plt.savefig(filenames[idx] + '.jpg', dpi=300)
         plt.close()
 

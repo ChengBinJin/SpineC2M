@@ -159,7 +159,7 @@ def save_imgs(slice_list, save_folder, methods, img_size, crop_size=(100, 80), f
 
 
 if __name__ == '__main__':
-    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'DC2Anet']
+    target_methods = ['pix2pix', 'cyclegan', 'discogan', 'mrgan', 'DC2Anet']
     target_measures = ['mae', 'rmse', 'psnr', 'ssim', 'pcc']
     img_size_ = (300, 200, 1)
 

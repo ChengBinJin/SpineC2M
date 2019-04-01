@@ -56,6 +56,7 @@ eval/mrganPlusPlus_w3=100
 eval/mrganPlusPlus_w3=1000
 eval/src/data
 eval/DC2Anet/
+eval/mrgan_copy/
 eval/src/best20_ssim_DC2Anet/
 eval/src/best30_ssim_DC2Anet/
 eval/src/best30_ssim_mrganPlus
