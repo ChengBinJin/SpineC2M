@@ -154,10 +154,14 @@ def pearson_correlation_coefficient(pred, gt):
     coeff, _ = pearsonr(gt.ravel(), pred.ravel())
     return coeff
 
-def difference_map(pred, gt, save_fold, img_name, measure, min_value=0, max_value=500):
-    save_fold = os.path.join(save_fold, measure)
+def difference_map(pred, gt, save_fold, img_name, method_name, min_value=0, max_value=500):
+    save_fold = os.path.join(save_fold, method_name)
     if not os.path.isdir(save_fold):
         os.makedirs(save_fold)
+
+    raw_img_fold = os.path.join(save_fold, 'raw')
+    if not os.path.isdir(raw_img_fold):
+        os.makedirs(raw_img_fold)
 
     pred = (pred[:, :, 1]).astype(np.float32)
     gt = (gt[:, :, 1]).astype(np.float32)
@@ -174,6 +178,9 @@ def difference_map(pred, gt, save_fold, img_name, measure, min_value=0, max_valu
 
     plt.savefig(os.path.join(save_fold, img_name), bbox_inches='tight')
     plt.close()
+
+    # save raw pred_img
+    cv2.imwrite(os.path.join(raw_img_fold, img_name), pred)
 
 
 def central_crop(img, crop_size=(100, 80), start_h=110, start_w=60, factor=1.2, color=(0, 0, 255), thickness=1, base=1):

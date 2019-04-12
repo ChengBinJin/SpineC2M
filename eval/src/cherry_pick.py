@@ -104,6 +104,15 @@ def main(methods, measures, img_size):
     save_imgs(new_slice_list, save_folder, methods, img_size)
 
 def save_imgs(slice_list, save_folder, methods, img_size, crop_size=(100, 80), factor=1.5):
+    # initialize CT and MR folders
+    ct_save_folder = os.path.join(save_folder, 'raw_ct')
+    if not os.path.exists(ct_save_folder):
+        os.makedirs(ct_save_folder)
+
+    mr_save_folder = os.path.join(save_folder, 'raw_mr')
+    if not os.path.exists(mr_save_folder):
+        os.makedirs(mr_save_folder)
+
     # Save image
     for idx in range(args.number):
         canvas, info_height, margin = None, None, None
@@ -156,6 +165,8 @@ def save_imgs(slice_list, save_folder, methods, img_size, crop_size=(100, 80), f
                 canvas[img_size[0]:, (idx_method+2)*img_size[1]-int(factor*crop_size[1]):(idx_method+2)*img_size[1], :] = crop_img
 
         cv2.imwrite(os.path.join(save_folder, img_name), canvas)
+        cv2.imwrite(os.path.join(ct_save_folder, img_name), ct_img)
+        cv2.imwrite(os.path.join(mr_save_folder, img_name), mri_img)
 
 
 if __name__ == '__main__':
