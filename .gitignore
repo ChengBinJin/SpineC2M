@@ -55,6 +55,7 @@ eval/mrganPlusPlus_w3=10
 eval/mrganPlusPlus_w3=100
 eval/mrganPlusPlus_w3=1000
 eval/src/data
+eval/src/*.zip
 eval/DC2Anet/
 eval/mrgan_copy/
 eval/src/ExperimentsData/
