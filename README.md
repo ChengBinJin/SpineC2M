@@ -28,7 +28,7 @@ This repository is a TensorFlow implementation of the paper "[DC2Anet: Generatin
 - [Deep MR-to-CT](https://arxiv.org/pdf/1708.01155.pdf)
 - [DiscoGAN](https://arxiv.org/pdf/1703.05192.pdf)
 - [MR-GAN](https://www.mdpi.com/1424-8220/19/10/2361)
-- DC2Anet (Ours)
+- [DC2Anet(Ours)](https://www.mdpi.com/2076-3417/9/12/2521)
 
 ## Documentation
 ### Directory Hierarchy
