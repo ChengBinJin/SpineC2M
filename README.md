@@ -30,6 +30,13 @@ This repository is a TensorFlow implementation of the paper "[DC2Anet: Generatin
 - [MR-GAN](https://www.mdpi.com/1424-8220/19/10/2361)
 - [DC2Anet(Ours)](https://www.mdpi.com/2076-3417/9/12/2521)
 
+The loss term of the DC2Anet includes the adversarial, the dual cycle-consistent, the voxel-wise, the gradient difference, the perceptual, and the structural similarity loss. A summary of the strengths and weaknesses of each loss term used in DC2Anet is given as following:
+
+<p align='center'>
+  <img src="https://user-images.githubusercontent.com/37034031/63356044-1969e780-c3a2-11e9-86a5-9c54934d95ca.png" width=800)
+</p>  
+
+
 ## Documentation
 ### Directory Hierarchy
 ``` 
@@ -72,3 +79,5 @@ Data
 Models_zoo
 └── caffe_layers_value.pickle
 ```  
+
+### Training DC2Anet
