@@ -91,8 +91,21 @@ Models_zoo
 ### Training DC2Anet
 
 ### Ablation Study Results
-The synthesis results for the ablation analysis are presented in the following figure.
+Our objective function contained six independent loss terms. The experiments reported above used all of the loss terms. To investigate the strength of each loss term, we employed ablation analysis to determine how performance was affected by each loss term. We trained each network with a different objective funtion five times using different initialization weights and report the average of the five trials for each objective function. The evaluation results are shown in Table. In addition, the synthesis results for the ablation analysis are presented in the following figure.
+
+<p align='center'>
+  <img src="https://user-images.githubusercontent.com/37034031/63496434-e12aec00-c4fc-11e9-8029-dbea22052232.png" width=800)
+</p> 
 
 <p align='center'>
   <img src="https://user-images.githubusercontent.com/37034031/63488397-c1d69380-c4e9-11e9-9f87-e1a8b0f58f8a.png" width=1000)
 </p> 
+  
+### Comparison with Baselines
+To compare synthesis MR images produced using different methods quantitatively, we present box plots in following figure representing the MAE, RMSE, PSNR, SSIM, and PCCs resulting from the use of [multi-channel GAN](https://arxiv.org/pdf/1707.09747.pdf), [deep MR-to-CT](https://arxiv.org/pdf/1708.01155.pdf), [DiscoGAN](https://arxiv.org/pdf/1703.05192.pdf), [MR-GAN](https://www.mdpi.com/1424-8220/19/10/2361), and our proposed method.
+
+<p align='center'>
+  <img src="https://user-images.githubusercontent.com/37034031/63496784-74fcb800-c4fd-11e9-90b5-c97fcc0553bb.png" width=1000)
+</p> 
+
+  
