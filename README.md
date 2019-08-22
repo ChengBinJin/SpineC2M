@@ -24,18 +24,26 @@ This repository is a TensorFlow implementation of the paper "[DC2Anet: Generatin
 </p>  
 
 ## Implementations
+### Related Works
 - [Multi-Channel GAN](https://arxiv.org/pdf/1707.09747.pdf)
 - [Deep MR-to-CT](https://arxiv.org/pdf/1708.01155.pdf)
 - [DiscoGAN](https://arxiv.org/pdf/1703.05192.pdf)
 - [MR-GAN](https://www.mdpi.com/1424-8220/19/10/2361)
 - [DC2Anet(Ours)](https://www.mdpi.com/2076-3417/9/12/2521)
 
-The loss term of the DC2Anet includes the adversarial, the dual cycle-consistent, the voxel-wise, the gradient difference, the perceptual, and the structural similarity loss. A summary of the strengths and weaknesses of each loss term used in DC2Anet is given as following:
+### Objective Function
+The objective function of DC2Anet contains six loss terms in total: adversarial, dual cycle-consistent, voxel-wise, gradient difference, perceptual, and structural similarity. A summary of the strengths and weaknesses of each loss term is given in bellow table.
 
 <p align='center'>
   <img src="https://user-images.githubusercontent.com/37034031/63356044-1969e780-c3a2-11e9-86a5-9c54934d95ca.png" width=800)
 </p>  
 
+### Hybrid Discriminator
+The variant architectures of the hybrid discriminator. Models A-F are hybrid discriminators for the aligned and unaligned data flow. Model G consists of two independent discriminators.
+
+<p align='center'>
+  <img src="https://user-images.githubusercontent.com/37034031/63488390-baaf8580-c4e9-11e9-8c34-7be29307b0fe.png" width=800)
+</p>  
 
 ## Documentation
 ### Directory Hierarchy
@@ -81,3 +89,10 @@ Models_zoo
 ```  
 
 ### Training DC2Anet
+
+### Ablation Study Results
+The synthesis results for the ablation analysis are presented in the following figure.
+
+<p align='center'>
+  <img src="https://user-images.githubusercontent.com/37034031/63488397-c1d69380-c4e9-11e9-9f87-e1a8b0f58f8a.png" width=800)
+</p> 
