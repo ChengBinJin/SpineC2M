@@ -35,7 +35,7 @@ This repository is a TensorFlow implementation of the paper "[DC2Anet: Generatin
 The objective function of DC2Anet contains six loss terms in total: adversarial, dual cycle-consistent, voxel-wise, gradient difference, perceptual, and structural similarity. A summary of the strengths and weaknesses of each loss term is given in bellow table.
 
 <p align='center'>
-  <img src="https://user-images.githubusercontent.com/37034031/63356044-1969e780-c3a2-11e9-86a5-9c54934d95ca.png" width=800)
+  <img src="https://user-images.githubusercontent.com/37034031/63356044-1969e780-c3a2-11e9-86a5-9c54934d95ca.png" width=1000)
 </p>  
 
 ### Hybrid Discriminator
