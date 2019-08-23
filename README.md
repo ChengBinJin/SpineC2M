@@ -89,6 +89,43 @@ Models_zoo
 ```  
 
 ### Training DC2Anet
+Under the folder of the DC2Anet, using `main.py` train a DC2Anet model. Example usage:
+```
+python main.py 
+```
+- `gpu_index`: gpu index if you have multiple gpus, default: `0`
+- `is_cycle_consistent`: cycle-consistent loss for the generator, default: `True`
+- `cycle_consistent_weight`: weight for the cycle-consistent loss term, default: `10.`
+- `is_voxel`: voxel-wise loss for the generator, default: `True`
+- `L1_lambda`: L1 lambda for conditional voxel-wise loss, default: `100.`
+- `is_gdl`: gradient difference loss (GDL) for the generator, default: `True`
+- `gdl_weight`: weight (hyper-parameter) for gradient difference loss term, default: `100.`
+- `is_perceptual`: perceputal loss for the generator, default: `True`
+- `perceptual_weight`: weight (hyper-parameter) for perceptual loss term, default: `1.`
+- `perceptual_mode`: feature layers [1|2|3|4|5], default: `5`
+- `is_ssim`: SSIM loss for the generator, default: `True`
+- `ssim_weight`: weight (hyper-parameter) for ssim loss term, default: `0.05`
+- `dis_model`: discriminator model, select from [a|b|c|d|e|f|g], default: `a`
+- `learning_mode`: learning mode, select from [super, unsuper, semi], default: `semi`
+- `is_alternative_optim`: optimizing by alterative or integrated optimization, default: `True`
+- `is_lsgan`: use LSGAN loss, default: `False`
+- `is_train`: training or inference mode, default: `True`
+- `batch_size`: batch size for one iteration, default: `1`  
+- `dataset`: dataset name, default: `spine06`  
+- `learning_rate`: initial learning rate for Adam, default: `2e-4` 
+- `beta1`: momentum term of Adam, default: `0.5`
+- `iters`: number of iterations, default: `200000`  
+- `print_freq`: print frequency for loss, default: `100`  
+- `save_freq`: save frequency for model, default: `10000`
+- `sample_freq`: sample frequency for saving image, default: `500`
+- `load_model`: folder of saved model that you wish to continue training, (e.g. 20181127-2116), default: `None`  
+
+### Test DC2Anet
+Use `main.py` to test the DC2Anet model. Example usage:
+```
+python main.py --load_model=folder/you/wish/to/test/e.g./20181127-2116
+```
+please refer to the above arguments.
 
 ### Ablation Study Results
 Our objective function contained six independent loss terms. The experiments reported above used all of the loss terms. To investigate the strength of each loss term, we employed ablation analysis to determine how performance was affected by each loss term. We trained each network with a different objective funtion five times using different initialization weights and report the average of the five trials for each objective function. The evaluation results are shown in Table. In addition, the synthesis results for the ablation analysis are presented in the following figure.
