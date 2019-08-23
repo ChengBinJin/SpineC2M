@@ -17,7 +17,7 @@ tf.flags.DEFINE_bool('is_voxel', True, 'voxel-wise loss for the generator, defau
 tf.flags.DEFINE_float('L1_lambda', 100., 'L1 lambda for conditional voxel-wise loss, default: 100.')
 tf.flags.DEFINE_bool('is_gdl', True, 'gradient difference loss (GDL) for the generator, default: True')
 tf.flags.DEFINE_float('gdl_weight', 100., 'weight (hyper-parameter) for gradient difference loss term, default: 100.')
-tf.flags.DEFINE_bool('is_perceptual', True, 'perceptual loss for for the generator, default: True')
+tf.flags.DEFINE_bool('is_perceptual', True, 'perceptual loss for the generator, default: True')
 tf.flags.DEFINE_float('perceptual_weight', 1., 'weight (hyper-parameter) for perceputal loss term, default: 1.')
 tf.flags.DEFINE_integer('perceptual_mode', 5, 'feature layers [1|2|3|4|5], default: 5')
 tf.flags.DEFINE_bool('is_ssim', True, 'SSIM loss for the generator, default: True')
@@ -28,7 +28,7 @@ tf.flags.DEFINE_bool('is_alternative_optim', True, 'optimizing by alterative or 
 tf.flags.DEFINE_bool('is_lsgan', False, 'use LSGAN loss, default: False')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 
-tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
+tf.flags.DEFINE_integer('batch_size', 1, 'batch size for one iteration, default: 1')
 tf.flags.DEFINE_string('dataset', 'spine06', 'dataset name, default: spine06')
 tf.flags.DEFINE_float('learning_rate', 2e-4, 'initial leraning rate for Adam, default: 0.0002')
 tf.flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam, default: 0.5')
