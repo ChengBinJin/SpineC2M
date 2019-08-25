@@ -161,3 +161,17 @@ To compare synthesis MR images produced using different methods quantitatively, 
 <p align='center'>
   <img src="https://user-images.githubusercontent.com/37034031/63496784-74fcb800-c4fd-11e9-90b5-c97fcc0553bb.png" width=1000)
 </p> 
+  
+### Citation
+```
+  @misc{chengbinjin2019DCNN,
+    author = {Cheng-Bin Jin},
+    title = {SpineC2M-Tensorflow},
+    year = {2019},
+    howpublished = {\url{https://github.com/ChengBinJin/SpineC2M},
+    note = {commit xxxxxxx}
+  }
+```
+
+## License
+Copyright (c) 2018 Cheng-Bin Jin. Contact me for commercial use (or rather any use that is not academic research) (email: sbkim0407@gmail.com). Free for research use, as long as proper attribution is given and this copyright notice is retained.
