@@ -8,14 +8,16 @@ def plot_statistics(data, id_names):
     labels = id_names
     width = 0.5  # the width of the bars
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, figsize=(16, 8))
     ax.bar(x, data, width, align='center', alpha=0.5)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Num of slices')
-    ax.set_title('Statistics of number of slices for each object')
+    ax.set_xlabel('Patient ID')
+    ax.set_title('Statistics of Number of Slices for Each Patient', fontsize=14)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
+    ax.yaxis.grid()
     plt.xticks(rotation=60)  # rotate xticks in 60 degree
 
     fig.tight_layout()
