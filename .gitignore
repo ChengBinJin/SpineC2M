@@ -12,6 +12,7 @@ eval/src/__pycache__/
 eval/src/*.xlsx
 eval/ct/
 eval/discogan/
+DC2Anet/img/
 .DS_Store
 */.DS_Store
 eval/src/*/*.jpg
